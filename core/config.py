@@ -21,8 +21,8 @@ DB_PATH = DATA_DIR / "news.db"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── API Keys ─────────────────────────────────────────────────────────────────
-OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -121,8 +121,8 @@ LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 def validate_config() -> list[str]:
     """Validate that all required configuration is present. Returns list of errors."""
     errors = []
-    if not OPENAI_API_KEY:
-        errors.append("OPENAI_API_KEY is not set.")
+    if not GEMINI_API_KEY:
+        errors.append("GEMINI_API_KEY is not set. Get one free at https://aistudio.google.com/apikey")
     if not TELEGRAM_BOT_TOKEN:
         errors.append("TELEGRAM_BOT_TOKEN is not set.")
     if not TELEGRAM_CHAT_ID:

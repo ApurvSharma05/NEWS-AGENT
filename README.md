@@ -14,7 +14,7 @@ A production-ready Python agent that monitors tech/AI news daily, filters articl
 - [Setup Guide](#setup-guide)
   - [1. Prerequisites](#1-prerequisites)
   - [2. Clone & Install](#2-clone--install)
-  - [3. OpenAI API Setup](#3-openai-api-setup)
+  - [3. Google Gemini API Setup](#3-google-gemini-api-setup)
   - [4. Telegram Bot Setup](#4-telegram-bot-setup)
   - [5. Configure Environment](#5-configure-environment)
 - [Running Locally](#running-locally)
@@ -35,7 +35,7 @@ A production-ready Python agent that monitors tech/AI news daily, filters articl
 |---------|-------------|
 | 📰 **Multi-source RSS** | Fetches from TechCrunch, The Verge, Ars Technica, HN, and more |
 | 🎯 **Smart Filtering** | Fuzzy company matching with aliases (e.g., "ChatGPT" → OpenAI) |
-| 🧠 **LLM Summarization** | Concise, actionable summaries via OpenAI API |
+| 🧠 **LLM Summarization** | Concise, actionable summaries via Google Gemini API (free tier!) |
 | 📊 **Importance Scoring** | Keyword-weighted ranking with breaking news detection |
 | 🔄 **Deduplication** | SQLite-backed, never sends the same article twice |
 | 📱 **Telegram Delivery** | Clean, formatted daily digest to your phone |
@@ -52,7 +52,7 @@ main.py                 → CLI entry point (digest / test / status)
        ├─ tools/fetch_rss.py       → RSS feed fetcher
        ├─ tools/filter_news.py     → Company filter + importance scorer
        ├─ tools/database.py        → SQLite dedup + storage
-       ├─ tools/summarize_news.py  → OpenAI summarizer
+       ├─ tools/summarize_news.py  → Gemini summarizer
        └─ tools/send_telegram.py   → Telegram delivery
   └─ core/config.py     → Centralized configuration
 ```
@@ -65,7 +65,7 @@ main.py                 → CLI entry point (digest / test / status)
 
 - **Python 3.11+** (tested on 3.11, 3.12, 3.13)
 - A **Telegram account**
-- An **OpenAI API key** with credit balance
+- A **Google Gemini API key** (free at [aistudio.google.com](https://aistudio.google.com/apikey))
 
 ### 2. Clone & Install
 
@@ -86,14 +86,14 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. OpenAI API Setup
+### 3. Google Gemini API Setup
 
-1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-2. Click **"Create new secret key"**
-3. Copy the key (starts with `sk-...`)
-4. Add credit at [platform.openai.com/settings/organization/billing](https://platform.openai.com/settings/organization/billing)
+1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Sign in with your Google account
+3. Click **"Create API Key"**
+4. Copy the key
 
-> **💡 Cost Estimate:** With `gpt-4o-mini`, a daily digest costs ~$0.01–$0.05/day (~$1/month).
+> **💡 Cost:** The free tier gives you **15 requests/minute** and **1M tokens/minute** — more than enough for daily digests. Zero cost!
 
 ### 4. Telegram Bot Setup
 
@@ -134,7 +134,7 @@ cp .env.example .env
 
 Fill in these **required** values:
 ```env
-OPENAI_API_KEY=sk-your-key-here
+GEMINI_API_KEY=your-gemini-api-key
 TELEGRAM_BOT_TOKEN=123456789:ABCdef...
 TELEGRAM_CHAT_ID=your-chat-id
 ```
@@ -160,7 +160,7 @@ python main.py --status
 2. Filters for mentions of tracked companies
 3. Removes articles you've already seen
 4. Scores articles by importance
-5. Sends top articles to OpenAI for summarization
+5. Sends top articles to Gemini for summarization
 6. Formats and delivers the digest to Telegram
 
 ---
@@ -242,7 +242,7 @@ crontab -e
        buildCommand: pip install -r requirements.txt
        startCommand: python main.py
        envVars:
-         - key: OPENAI_API_KEY
+         - key: GEMINI_API_KEY
            sync: false
          - key: TELEGRAM_BOT_TOKEN
            sync: false
@@ -312,8 +312,8 @@ Swap `TelegramSender` for `SlackSender`, `DiscordSender`, or `EmailSender` — a
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | ✅ | — | OpenAI API key |
-| `OPENAI_MODEL` | ❌ | `gpt-4o-mini` | Model for summarization |
+| `GEMINI_API_KEY` | ✅ | — | Google Gemini API key (free) |
+| `GEMINI_MODEL` | ❌ | `gemini-2.0-flash` | Model for summarization |
 | `TELEGRAM_BOT_TOKEN` | ✅ | — | Telegram bot token |
 | `TELEGRAM_CHAT_ID` | ✅ | — | Target chat/channel ID |
 | `TRACKED_COMPANIES` | ❌ | 6 defaults | Comma-separated company list |
@@ -354,5 +354,3 @@ news-agent/
 ## 📄 License
 
 MIT License — use freely, modify as needed.
-#   N E W S - A G E N T  
- 
