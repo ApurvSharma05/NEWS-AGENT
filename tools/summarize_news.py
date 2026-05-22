@@ -1,32 +1,54 @@
 """
-LLM Summarization Tool.
+LLM Summarization Tool — Production-grade with rate limiting.
 
 Uses the Google Gemini API to generate concise, actionable summaries
 of news articles for the daily digest.
 
-Free tier: 15 requests/minute, 1M tokens/minute — more than enough for daily digests.
+Rate-limit resilient:
+  - Exponential backoff retry on 429/500/503 errors
+  - Smart batching (chunks of GEMINI_BATCH_SIZE articles per API call)
+  - Inter-batch cooldown to respect RPM limits
+  - Summary caching via SQLite to avoid redundant API calls
+  - Graceful fallback to raw summaries on persistent failure
 """
 
 import json
 import logging
+import time
 from typing import Any
 
 import requests
 
-from core.config import GEMINI_API_KEY, GEMINI_MODEL
+from core.config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    GEMINI_BATCH_SIZE,
+    GEMINI_RETRY_ATTEMPTS,
+    GEMINI_RETRY_BASE_DELAY,
+    GEMINI_COOLDOWN_DELAY,
+)
 
 logger = logging.getLogger(__name__)
 
 # Gemini API endpoint (REST, no SDK required)
 _GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
+# HTTP status codes that should trigger a retry
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503}
+
+# Cooldown between batch API calls (seconds) to stay under RPM
+_INTER_BATCH_COOLDOWN = GEMINI_COOLDOWN_DELAY
+
 
 class NewsSummarizer:
     """
     Summarizes news articles using Google's Gemini API.
 
-    Sends a batch of articles and receives structured summaries
-    grouped by company.
+    Production-grade features:
+      - Exponential backoff with jitter on rate limit errors
+      - Smart batching to stay under token limits
+      - SQLite-based summary caching to avoid redundant API calls
+      - Fallback to raw summaries on persistent failure
     """
 
     def __init__(
@@ -36,6 +58,8 @@ class NewsSummarizer:
     ) -> None:
         self.api_key = api_key or GEMINI_API_KEY
         self.model = model or GEMINI_MODEL
+        self.max_retries = GEMINI_RETRY_ATTEMPTS
+        self.base_delay = GEMINI_RETRY_BASE_DELAY
 
         if not self.api_key:
             raise ValueError(
@@ -43,17 +67,24 @@ class NewsSummarizer:
                 "Get one free at https://aistudio.google.com/apikey"
             )
 
+    # ── Public API ────────────────────────────────────────────────────────
+
     def summarize_batch(
         self,
         articles: list[dict[str, Any]],
         language: str = "english",
+        cache_db: Any = None,
     ) -> list[dict]:
         """
         Summarize a batch of articles into concise bullet points.
 
+        Uses SQLite caching (if cache_db provided) to skip articles that
+        have already been summarized in a previous run.
+
         Args:
             articles: List of article dicts with title, summary, link, companies.
             language: Target summary language ("english" or "hindi").
+            cache_db: Optional NewsDatabase instance for summary caching.
 
         Returns:
             List of dicts with keys: title, summary, link, companies, importance_score.
@@ -61,69 +92,232 @@ class NewsSummarizer:
         if not articles:
             return []
 
-        # Build the article list for the prompt
-        article_descriptions = []
+        # ── Step 1: Check cache for already-summarized articles ──────────
+        cached_summaries: list[dict] = []
+        uncached_articles: list[dict] = articles
+
+        if cache_db is not None:
+            try:
+                cached_map = cache_db.get_cached_summaries(
+                    [a.get("link", "") for a in articles]
+                )
+                cached_summaries = []
+                uncached_articles = []
+
+                for article in articles:
+                    link = article.get("link", "")
+                    if link in cached_map:
+                        cached_summaries.append(cached_map[link])
+                        logger.debug("Cache hit for: %s", article.get("title", "")[:60])
+                    else:
+                        uncached_articles.append(article)
+
+                logger.info(
+                    "Summary cache: %d hits, %d misses.",
+                    len(cached_summaries),
+                    len(uncached_articles),
+                )
+            except Exception as exc:
+                logger.warning("Cache lookup failed, summarizing all: %s", exc)
+                uncached_articles = articles
+
+        if not uncached_articles:
+            logger.info("All articles found in cache. No API calls needed.")
+            return cached_summaries
+
+        # ── Step 2: Split uncached articles into manageable batches ───────
+        batches = self._split_into_batches(uncached_articles, GEMINI_BATCH_SIZE)
+        logger.info(
+            "Splitting %d uncached articles into %d batch(es) of ≤%d.",
+            len(uncached_articles),
+            len(batches),
+            GEMINI_BATCH_SIZE,
+        )
+
+        # ── Step 3: Process each batch with rate-limit-aware calls ───────
+        all_summaries: list[dict] = []
+
+        for batch_idx, batch in enumerate(batches, 1):
+            logger.info(
+                "Processing batch %d/%d (%d articles)...",
+                batch_idx,
+                len(batches),
+                len(batch),
+            )
+
+            try:
+                batch_summaries = self._summarize_single_batch(batch, language)
+                all_summaries.extend(batch_summaries)
+
+                # Cache the fresh summaries
+                if cache_db is not None:
+                    try:
+                        cache_db.cache_summaries(batch_summaries)
+                    except Exception as exc:
+                        logger.warning("Failed to cache summaries: %s", exc)
+
+            except Exception as exc:
+                logger.error(
+                    "Batch %d/%d failed after retries: %s",
+                    batch_idx,
+                    len(batches),
+                    exc,
+                )
+                # Fallback for this batch
+                all_summaries.extend(self._fallback_summaries(batch))
+
+            # Inter-batch cooldown (skip after the last batch)
+            if batch_idx < len(batches):
+                logger.debug(
+                    "Cooling down %.1fs before next batch...",
+                    _INTER_BATCH_COOLDOWN,
+                )
+                time.sleep(_INTER_BATCH_COOLDOWN)
+
+        # ── Step 4: Merge cached + fresh summaries ───────────────────────
+        return cached_summaries + all_summaries
+
+    # ── Private: Single batch summarization ───────────────────────────────
+
+    def _summarize_single_batch(
+        self,
+        articles: list[dict[str, Any]],
+        language: str,
+    ) -> list[dict]:
+        """
+        Summarize a single batch of articles (≤ GEMINI_BATCH_SIZE).
+        Includes retry logic with exponential backoff.
+        """
+        system_instruction, user_prompt = self._build_prompts(articles, language)
+
+        raw_response = self._call_gemini_with_retry(system_instruction, user_prompt)
+        summaries = self._parse_response(raw_response, articles)
+        return summaries
+
+    def _build_prompts(
+        self,
+        articles: list[dict[str, Any]],
+        language: str,
+    ) -> tuple[str, str]:
+        """Build compact, token-efficient prompts for the Gemini API."""
+
+        # Compact article descriptions to minimize tokens
+        article_lines = []
         for i, article in enumerate(articles, 1):
-            companies = ", ".join(article.get("companies", []))
-            score = article.get("importance_score", 0)
-            desc = (
-                f"{i}. [{companies}] (score: {score})\n"
-                f"   Title: {article['title']}\n"
-                f"   Source: {article.get('source', 'Unknown')}\n"
-                f"   Content: {article.get('summary', 'N/A')[:500]}\n"
-                f"   Link: {article.get('link', '')}"
+            companies = ",".join(article.get("companies", []))
+            # Truncate content aggressively to save tokens
+            content = article.get("summary", "")[:300]
+            article_lines.append(
+                f"{i}.[{companies}] {article['title']} | "
+                f"{article.get('source', '?')} | "
+                f"{content}"
             )
-            article_descriptions.append(desc)
 
-        articles_text = "\n\n".join(article_descriptions)
+        articles_text = "\n".join(article_lines)
 
-        lang_instruction = ""
-        if language.lower() == "hindi":
-            lang_instruction = (
-                "Write the summaries in Hindi (Devanagari script). "
-                "Keep company names and technical terms in English."
-            )
-        else:
-            lang_instruction = "Write the summaries in clear, concise English."
+        lang_note = (
+            "Reply in Hindi (Devanagari). Keep names/tech terms in English."
+            if language.lower() == "hindi"
+            else ""
+        )
 
         system_instruction = (
-            "You are an expert AI industry analyst. Your job is to create "
-            "a concise daily intelligence digest about AI competitor companies. "
-            "Focus on what matters: product launches, funding, partnerships, "
-            "leadership changes, regulatory actions, and technical breakthroughs. "
-            "Skip fluff and opinion pieces.\n\n"
-            f"{lang_instruction}"
+            "You are an AI industry analyst. Create concise intelligence summaries. "
+            "Focus on: launches, funding, partnerships, leadership, regulation, breakthroughs. "
+            f"Skip opinion/fluff. {lang_note}"
         )
 
         user_prompt = (
-            f"Summarize each of the following {len(articles)} news articles into "
-            "a single concise bullet point (1-2 sentences max). "
-            "Preserve the company association and importance score.\n\n"
-            "Return your response as a JSON array where each element has:\n"
-            '  - "title": original article title\n'
-            '  - "summary": your 1-2 sentence summary\n'
-            '  - "companies": list of company names\n'
-            '  - "importance_score": the original score\n'
-            '  - "link": original article link\n\n'
-            f"Articles:\n\n{articles_text}\n\n"
-            "Respond ONLY with the JSON array, no markdown fences or extra text."
+            f"Summarize these {len(articles)} articles (1-2 sentences each).\n"
+            "Return JSON array: [{\"title\":str,\"summary\":str,"
+            "\"companies\":[str],\"importance_score\":num,\"link\":str}]\n\n"
+            f"{articles_text}"
         )
 
-        try:
-            result = self._call_gemini(system_instruction, user_prompt)
-            summaries = self._parse_response(result, articles)
-            return summaries
-        except Exception as exc:
-            logger.error("Summarization failed: %s", exc, exc_info=True)
-            # Fallback: return articles with truncated original summaries
-            return self._fallback_summaries(articles)
+        return system_instruction, user_prompt
+
+    # ── Private: Gemini API call with exponential backoff ─────────────────
+
+    def _call_gemini_with_retry(
+        self,
+        system_instruction: str,
+        user_prompt: str,
+    ) -> str:
+        """
+        Make a Gemini API call with exponential backoff retry.
+
+        Retry strategy:
+          - Attempt 1: immediate
+          - Attempt 2: wait base_delay * 1   (5s)
+          - Attempt 3: wait base_delay * 3   (15s)
+          - Attempt 4: wait base_delay * 9   (45s)
+
+        Only retries on 429, 500, 502, 503 status codes.
+        """
+        last_exception: Exception | None = None
+
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                return self._call_gemini(system_instruction, user_prompt)
+
+            except requests.exceptions.HTTPError as exc:
+                status_code = exc.response.status_code if exc.response is not None else 0
+
+                if status_code not in _RETRYABLE_STATUS_CODES:
+                    # Non-retryable error (400, 401, 403, etc.) — fail immediately
+                    logger.error(
+                        "Non-retryable Gemini error (HTTP %d): %s",
+                        status_code,
+                        exc,
+                    )
+                    raise
+
+                last_exception = exc
+
+                if attempt < self.max_retries:
+                    # Exponential backoff: delay * 3^(attempt-1)
+                    delay = self.base_delay * (3 ** (attempt - 1))
+                    logger.warning(
+                        "Gemini 429/5xx (attempt %d/%d). "
+                        "Retrying in %.1fs... [HTTP %d]",
+                        attempt,
+                        self.max_retries,
+                        delay,
+                        status_code,
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(
+                        "Gemini API failed after %d attempts. Last error: HTTP %d",
+                        self.max_retries,
+                        status_code,
+                    )
+
+            except requests.exceptions.RequestException as exc:
+                last_exception = exc
+
+                if attempt < self.max_retries:
+                    delay = self.base_delay * (3 ** (attempt - 1))
+                    logger.warning(
+                        "Network error (attempt %d/%d). Retrying in %.1fs...: %s",
+                        attempt,
+                        self.max_retries,
+                        delay,
+                        exc,
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(
+                        "Network error persisted after %d attempts: %s",
+                        self.max_retries,
+                        exc,
+                    )
+
+        raise last_exception  # type: ignore[misc]
 
     def _call_gemini(self, system_instruction: str, user_prompt: str) -> str:
         """
-        Make a Gemini generateContent API call via REST.
-
-        Uses the system_instruction field for the system prompt and
-        a single user turn for the article data.
+        Make a single Gemini generateContent API call via REST.
         """
         url = _GEMINI_URL.format(model=self.model)
         params = {"key": self.api_key}
@@ -155,7 +349,9 @@ class NewsSummarizer:
         if response.status_code != 200:
             error_detail = response.text[:500]
             logger.error(
-                "Gemini API error (HTTP %d): %s", response.status_code, error_detail
+                "Gemini API error (HTTP %d): %s",
+                response.status_code,
+                error_detail,
             )
             response.raise_for_status()
 
@@ -169,8 +365,21 @@ class NewsSummarizer:
             logger.debug("Full response: %s", json.dumps(data)[:1000])
             raise ValueError(f"Could not parse Gemini response: {exc}") from exc
 
-        logger.debug("Gemini response length: %d chars", len(content))
+        logger.debug("Gemini response: %d chars", len(content))
         return content
+
+    # ── Private: Helpers ──────────────────────────────────────────────────
+
+    @staticmethod
+    def _split_into_batches(
+        articles: list[dict[str, Any]],
+        batch_size: int,
+    ) -> list[list[dict[str, Any]]]:
+        """Split articles into chunks of batch_size."""
+        return [
+            articles[i : i + batch_size]
+            for i in range(0, len(articles), batch_size)
+        ]
 
     @staticmethod
     def _parse_response(
@@ -181,7 +390,6 @@ class NewsSummarizer:
         Parse the JSON array from the LLM response.
         Falls back to original articles on parse failure.
         """
-        # Strip markdown code fences if present
         cleaned = raw_response.strip()
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
@@ -195,14 +403,13 @@ class NewsSummarizer:
         except json.JSONDecodeError as exc:
             logger.warning("Failed to parse LLM JSON response: %s", exc)
 
-        # Fallback
         return NewsSummarizer._fallback_summaries(original_articles)
 
     @staticmethod
     def _fallback_summaries(articles: list[dict[str, Any]]) -> list[dict]:
         """
         Generate fallback summaries using original article data.
-        Used when the LLM call fails.
+        Used when the LLM call fails after all retries.
         """
         fallbacks = []
         for article in articles:

@@ -1,10 +1,4 @@
-"""
-SQLite Database Tool for article deduplication and storage.
-
-Manages a local SQLite database to track which articles have already
-been processed, preventing duplicate entries in the digest.
-"""
-
+import json
 import logging
 import sqlite3
 from datetime import datetime, timezone
@@ -33,6 +27,16 @@ _CREATE_INDEX_SQL = """
 CREATE INDEX IF NOT EXISTS idx_articles_link ON articles(link);
 """
 
+# Summary cache table — stores LLM-generated summaries keyed by article link
+# so re-running the agent never re-summarizes the same article.
+_CREATE_CACHE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS summary_cache (
+    link        TEXT    PRIMARY KEY,
+    summary_json TEXT   NOT NULL,
+    created_at  TEXT    NOT NULL
+);
+"""
+
 
 class NewsDatabase:
     """
@@ -51,6 +55,7 @@ class NewsDatabase:
             with self._connect() as conn:
                 conn.execute(_CREATE_TABLE_SQL)
                 conn.execute(_CREATE_INDEX_SQL)
+                conn.execute(_CREATE_CACHE_TABLE_SQL)
                 conn.commit()
             logger.info("Database initialized at %s", self.db_path)
         except sqlite3.Error as exc:
@@ -176,3 +181,81 @@ class NewsDatabase:
         except sqlite3.Error as exc:
             logger.error("Failed to count articles: %s", exc)
             return 0
+
+    # ── Summary Cache ─────────────────────────────────────────────────────
+
+    def get_cached_summaries(
+        self, links: list[str]
+    ) -> dict[str, dict]:
+        """
+        Look up previously cached LLM summaries by article link.
+
+        Args:
+            links: List of article URLs to check.
+
+        Returns:
+            Dict mapping link -> summary dict for articles found in cache.
+        """
+        if not links:
+            return {}
+
+        cached: dict[str, dict] = {}
+        try:
+            with self._connect() as conn:
+                for link in links:
+                    if not link:
+                        continue
+                    row = conn.execute(
+                        "SELECT summary_json FROM summary_cache WHERE link = ?",
+                        (link,),
+                    ).fetchone()
+                    if row:
+                        try:
+                            cached[link] = json.loads(row["summary_json"])
+                        except json.JSONDecodeError:
+                            pass  # Corrupted cache entry — skip
+        except sqlite3.Error as exc:
+            logger.error("Cache lookup failed: %s", exc)
+
+        return cached
+
+    def cache_summaries(self, summaries: list[dict]) -> int:
+        """
+        Store LLM-generated summaries in the cache.
+
+        Args:
+            summaries: List of summary dicts (must have 'link' key).
+
+        Returns:
+            Number of entries cached.
+        """
+        if not summaries:
+            return 0
+
+        cached_count = 0
+        now = datetime.now(timezone.utc).isoformat()
+
+        try:
+            with self._connect() as conn:
+                for summary in summaries:
+                    link = summary.get("link", "")
+                    if not link:
+                        continue
+                    try:
+                        conn.execute(
+                            """
+                            INSERT OR REPLACE INTO summary_cache
+                                (link, summary_json, created_at)
+                            VALUES (?, ?, ?)
+                            """,
+                            (link, json.dumps(summary, ensure_ascii=False), now),
+                        )
+                        cached_count += 1
+                    except sqlite3.Error:
+                        pass  # Skip individual failures
+                conn.commit()
+        except sqlite3.Error as exc:
+            logger.error("Failed to cache summaries: %s", exc)
+
+        logger.debug("Cached %d summaries.", cached_count)
+        return cached_count

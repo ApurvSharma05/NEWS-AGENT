@@ -106,8 +106,10 @@ class NewsAgent:
         top_articles = scored[:DIGEST_MAX_ARTICLES]
         logger.info("Preparing digest with top %d articles.", len(top_articles))
 
-        # Step 5 — Summarize
-        summaries = self.summarizer.summarize_batch(top_articles, language=SUMMARY_LANGUAGE)
+        # Step 5 — Summarize (with caching to avoid redundant API calls)
+        summaries = self.summarizer.summarize_batch(
+            top_articles, language=SUMMARY_LANGUAGE, cache_db=self.db
+        )
         logger.info("Generated %d summaries.", len(summaries))
 
         # Step 6 — Build and send digest

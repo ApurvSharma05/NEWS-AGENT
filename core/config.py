@@ -117,6 +117,13 @@ BREAKING_NEWS_THRESHOLD: float = float(os.getenv("BREAKING_NEWS_THRESHOLD", "8.0
 SUMMARY_LANGUAGE: str = os.getenv("SUMMARY_LANGUAGE", "english")  # "english" or "hindi"
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
+# ─── Gemini Rate Limiting ─────────────────────────────────────────────────────
+# Tuned for the free tier (configured for 5 RPM to prevent rate limiting)
+GEMINI_BATCH_SIZE: int = int(os.getenv("GEMINI_BATCH_SIZE", "10"))
+GEMINI_RETRY_ATTEMPTS: int = int(os.getenv("GEMINI_RETRY_ATTEMPTS", "3"))
+GEMINI_RETRY_BASE_DELAY: float = float(os.getenv("GEMINI_RETRY_BASE_DELAY", "12.0"))
+GEMINI_COOLDOWN_DELAY: float = float(os.getenv("GEMINI_COOLDOWN_DELAY", "12.0"))
+
 # ─── Validation ───────────────────────────────────────────────────────────────
 def validate_config() -> list[str]:
     """Validate that all required configuration is present. Returns list of errors."""
