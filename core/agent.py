@@ -131,58 +131,67 @@ class NewsAgent:
 
     def _format_digest(self, summaries: list[dict]) -> str:
         """
-        Format summaries into a clean, company-grouped Telegram digest.
+        Format summaries into a clean, strategy-focused Telegram digest grouped by category.
         """
         today = datetime.now().strftime("%B %d, %Y")
-        lines = [f"*EPC Competitor Digest -- {today}*\n"]
+        lines = [f"🏗️ *EPC Competitor Intelligence — {today}*\n"]
 
-        # Group by company
-        company_groups: dict[str, list[dict]] = {}
-        ungrouped: list[dict] = []
+        # Sort articles by importance score descending
+        summaries_sorted = sorted(
+            summaries, key=lambda a: a.get("importance_score", 0), reverse=True
+        )
 
-        for item in summaries:
-            companies = item.get("companies", [])
-            if companies:
-                for company in companies:
-                    company_groups.setdefault(company, []).append(item)
-            else:
-                ungrouped.append(item)
+        # ── Key Takeaways (Top 3) ──
+        if summaries_sorted:
+            lines.append("🎯 *Key Takeaways*")
+            for article in summaries_sorted[:3]:
+                comps = ", ".join(article.get("companies", []))
+                lines.append(f"• *{comps}*: {article.get('title', 'Untitled')}")
+            lines.append("")
 
-        # Render each company section
-        for company in TRACKED_COMPANIES:
-            articles = company_groups.get(company, [])
+        # ── Group by Strategic Category ──
+        category_groups: dict[str, list[dict]] = {}
+        for item in summaries_sorted:
+            cat = item.get("category", "OTHER").replace("_", " ")
+            category_groups.setdefault(cat, []).append(item)
+
+        # Pre-defined order for categories
+        cat_order = [
+            "CONTRACT WIN", "M&A", "FINANCIAL", "EXPANSION",
+            "TECH CAPABILITY", "PARTNERSHIP", "LEADERSHIP", "RISK", "OTHER"
+        ]
+
+        seen_titles = set()
+        
+        for cat in cat_order:
+            articles = category_groups.get(cat, [])
             if not articles:
                 continue
 
-            lines.append(f"\n*• {company}:*")
-            seen_titles = set()
+            lines.append(f"\n📊 *{cat}*")
             for article in articles:
                 title = article.get("title", "Untitled")
                 if title in seen_titles:
                     continue
                 seen_titles.add(title)
 
+                companies_str = ", ".join(article.get("companies", []))
                 summary_text = article.get("summary", "")
+                implication = article.get("strategic_implication", "")
                 link = article.get("link", "")
                 score = article.get("importance_score", 0)
 
                 prefix = "🔴" if score >= BREAKING_NEWS_THRESHOLD else "  ▸"
-                lines.append(f"{prefix} {summary_text}")
+                lines.append(f"{prefix} *{companies_str}*: {summary_text}")
+                
+                if implication:
+                    lines.append(f"    💡 _Implication: {implication}_")
+                    
                 if link:
-                    lines.append(f"    🔗 [Read more]({link})")
-
-        # Ungrouped (multi-company or edge cases)
-        if ungrouped:
-            lines.append("\n*• Other:*")
-            for article in ungrouped:
-                summary_text = article.get("summary", "")
-                link = article.get("link", "")
-                lines.append(f"  ▸ {summary_text}")
-                if link:
-                    lines.append(f"    🔗 [Read more]({link})")
+                    lines.append(f"    🔗 [Source]({link})")
 
         lines.append("\n---")
-        lines.append("_Powered by AI News Agent_")
+        lines.append("_Technip Energies Competitor Intelligence_")
         return "\n".join(lines)
 
     @staticmethod

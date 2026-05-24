@@ -222,18 +222,22 @@ class NewsSummarizer:
         )
 
         system_instruction = (
-            "You are an EPC and energy sector competitive intelligence analyst. "
-            "Create concise intelligence summaries about engineering, procurement, "
-            "and construction companies in oil & gas, LNG, petrochemicals, and energy transition. "
-            "Focus on: contract awards, project milestones, M&A, partnerships, joint ventures, "
-            "leadership changes, financial results, backlog updates, safety incidents, and regulation. "
+            "You are a Senior Strategy Analyst at Technip Energies NV. "
+            "Create concise competitive intelligence summaries about your EPC peers "
+            "(e.g., Saipem, Fluor, Bechtel, Wood, MAIRE). "
+            "Focus strictly on strategic value: contract awards, project milestones, M&A, "
+            "partnerships, leadership changes, financial results, and energy transition moves. "
             f"Skip opinion/fluff. {lang_note}"
         )
 
         user_prompt = (
-            f"Summarize these {len(articles)} articles (1-2 sentences each).\n"
-            "Return JSON array: [{\"title\":str,\"summary\":str,"
-            "\"companies\":[str],\"importance_score\":num,\"link\":str}]\n\n"
+            f"Summarize these {len(articles)} competitor articles (1-2 sentences each).\n"
+            "For each, assign a 'category' (choose from: CONTRACT_WIN, M&A, EXPANSION, LEADERSHIP, FINANCIAL, RISK, TECH_CAPABILITY, PARTNERSHIP, OTHER).\n"
+            "Also provide a 'strategic_implication' (1 sentence: what this means for Technip Energies' competitive position).\n"
+            "CRITICAL: You must return a STRICTLY VALID JSON array. Do not use trailing commas. Ensure all property names are enclosed in double quotes.\n"
+            "Return JSON array exactly like this: [{\"title\":\"string\",\"summary\":\"string\","
+            "\"companies\":[\"string\"],\"importance_score\":0.0,\"link\":\"string\","
+            "\"category\":\"string\",\"strategic_implication\":\"string\"}]\n\n"
             f"{articles_text}"
         )
 

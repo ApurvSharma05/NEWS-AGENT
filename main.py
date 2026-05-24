@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-AI News Monitoring Agent — Entry Point
+EPC Competitor Intelligence Agent — Entry Point
 
 Run this script daily (via cron or scheduler) to:
   1. Fetch news from RSS feeds
-  2. Filter articles about tracked AI companies
-  3. Summarize with an LLM
+  2. Filter articles about tracked EPC competitors
+  3. Summarize with an LLM for strategic implications
   4. Send a digest to Telegram
 
 Usage:
@@ -62,7 +62,7 @@ def test_telegram() -> None:
     sender = TelegramSender()
     if sender.verify_bot():
         sender.send_message(
-            f"✅ *AI News Agent — Test Message*\n\n"
+            f"✅ *EPC Competitor Intelligence — Test Message*\n\n"
             f"Bot is connected and working!\n"
             f"Tracking: {', '.join(TRACKED_COMPANIES)}\n"
             f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -85,7 +85,7 @@ def show_status() -> None:
     # consoles that use cp1252 encoding.
     border = "=" * 50
     print(f"\n{border}")
-    print("  AI News Agent -- Status")
+    print("  EPC Competitor Intelligence -- Status")
     print(border)
     print(f"  Database:    {DB_PATH}")
     print(f"  Articles:    {count} total")
@@ -104,7 +104,7 @@ def show_status() -> None:
 def main() -> None:
     """Parse CLI arguments and dispatch."""
     parser = argparse.ArgumentParser(
-        description="AI News Monitoring Agent — Daily Competitor Digest",
+        description="EPC Competitor Intelligence Agent — Daily Digest",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
