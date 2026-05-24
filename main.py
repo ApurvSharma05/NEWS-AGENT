@@ -15,6 +15,7 @@ Usage:
 """
 
 import argparse
+import io
 import logging
 import sys
 from datetime import datetime
@@ -27,12 +28,17 @@ def setup_logging() -> None:
     log_format = (
         "%(asctime)s │ %(levelname)-8s │ %(name)-24s │ %(message)s"
     )
+    # Wrap stdout in a UTF-8 stream so Unicode log separators (│) don't
+    # crash on Windows consoles that default to cp1252.
+    utf8_stdout = io.TextIOWrapper(
+        sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True,
+    )
     logging.basicConfig(
         level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
         format=log_format,
         datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[
-            logging.StreamHandler(sys.stdout),
+            logging.StreamHandler(utf8_stdout),
             logging.FileHandler("news_agent.log", encoding="utf-8"),
         ],
     )
@@ -61,9 +67,9 @@ def test_telegram() -> None:
             f"Tracking: {', '.join(TRACKED_COMPANIES)}\n"
             f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        print("✅ Test message sent successfully!")
+        print("[OK] Test message sent successfully!")
     else:
-        print("❌ Failed to verify Telegram bot. Check your TELEGRAM_BOT_TOKEN.")
+        print("[FAIL] Failed to verify Telegram bot. Check your TELEGRAM_BOT_TOKEN.")
         sys.exit(1)
 
 
@@ -75,20 +81,23 @@ def show_status() -> None:
     count = db.count_articles()
     recent = db.get_recent_articles(limit=5)
 
-    print("\n" + "═" * 50)
-    print("  AI News Agent — Status")
-    print("═" * 50)
+    # Use ASCII-safe characters so --status never crashes on Windows
+    # consoles that use cp1252 encoding.
+    border = "=" * 50
+    print(f"\n{border}")
+    print("  AI News Agent -- Status")
+    print(border)
     print(f"  Database:    {DB_PATH}")
     print(f"  Articles:    {count} total")
     print(f"  Tracking:    {', '.join(TRACKED_COMPANIES)}")
-    print("═" * 50)
+    print(border)
 
     if recent:
         print("\n  Recent articles:")
         for article in recent:
             title = article.get("title", "Untitled")[:60]
             source = article.get("source", "?")
-            print(f"    • [{source}] {title}")
+            print(f"    - [{source}] {title}")
     print()
 
 

@@ -1,8 +1,11 @@
 """
-Configuration module for the AI News Monitoring Agent.
+Configuration module for the Competitor News Monitoring Agent.
 
 Centralizes all configuration: environment variables, tracked companies,
 RSS sources, keyword weights, and application settings.
+
+Configured to monitor Technip Energies NV's key competitors in the
+EPC (Engineering, Procurement & Construction) / Energy sector.
 """
 
 import os
@@ -22,20 +25,30 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── API Keys ─────────────────────────────────────────────────────────────────
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
 TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # ─── Companies to Track ──────────────────────────────────────────────────────
+# Technip Energies NV competitors (EPC / Energy sector)
 # Configurable via TRACKED_COMPANIES env var (comma-separated) or defaults
 _default_companies = [
-    "OpenAI",
-    "Anthropic",
-    "Google DeepMind",
-    "Perplexity",
-    "xAI",
-    "Mistral AI",
+    "Saipem",
+    "Fluor",
+    "Bechtel",
+    "Worley",
+    "Petrofac",
+    "McDermott",
+    "Wood Group",
+    "MAIRE",
+    "JGC Holdings",
+    "Larsen & Toubro",
+    "Samsung E&A",
+    "AECOM",
+    "Baker Hughes",
+    "Linde",
+    "AtkinsRealis",
 ]
 
 _env_companies = os.getenv("TRACKED_COMPANIES", "")
@@ -48,66 +61,110 @@ TRACKED_COMPANIES: list[str] = (
 # ─── Company Aliases (for fuzzy matching) ────────────────────────────────────
 # Maps canonical company name → list of alternative spellings / abbreviations
 COMPANY_ALIASES: dict[str, list[str]] = {
-    "OpenAI": ["openai", "open ai", "open-ai", "chatgpt", "gpt-4", "gpt-5", "gpt4", "gpt5", "dall-e", "dalle", "sora"],
-    "Anthropic": ["anthropic", "claude", "claude 3", "claude 4", "claude opus", "claude sonnet"],
-    "Google DeepMind": ["google deepmind", "deepmind", "gemini", "gemini pro", "gemini ultra", "google ai", "bard"],
-    "Perplexity": ["perplexity", "perplexity ai", "perplexity.ai"],
-    "xAI": ["xai", "x.ai", "grok", "elon musk ai"],
-    "Mistral AI": ["mistral", "mistral ai", "mistralai", "mixtral", "le chat"],
+    "Saipem": ["saipem", "saipem spa"],
+    "Fluor": ["fluor", "fluor corporation", "fluor corp"],
+    "Bechtel": ["bechtel", "bechtel corporation", "bechtel corp", "bechtel group"],
+    "Worley": ["worley", "worley limited", "worleyparsons", "worley parsons"],
+    "Petrofac": ["petrofac", "petrofac limited", "petrofac ltd"],
+    "McDermott": ["mcdermott", "mcdermott international", "cb&i", "lummus"],
+    "Wood Group": ["wood group", "john wood group", "wood plc", "john wood"],
+    "MAIRE": ["maire", "maire tecnimont", "tecnimont", "maire spa", "nextchem"],
+    "JGC Holdings": ["jgc", "jgc holdings", "jgc corporation", "jgc corp"],
+    "Larsen & Toubro": ["larsen & toubro", "larsen and toubro", "l&t", "l & t", "l&t hydrocarbon", "l&t energy"],
+    "Samsung E&A": ["samsung e&a", "samsung engineering", "samsung e & a", "samsung eng"],
+    "AECOM": ["aecom", "aecom technology"],
+    "Baker Hughes": ["baker hughes", "bakerhughes", "baker hughes co"],
+    "Linde": ["linde", "linde plc", "linde engineering", "linde group"],
+    "AtkinsRealis": ["atkinsrealis", "atkins realis", "snc-lavalin", "snc lavalin", "sncl"],
 }
 
 # ─── Keyword Weights (for importance scoring) ────────────────────────────────
+# Tuned for EPC / Energy sector competitive intelligence
 KEYWORD_WEIGHTS: dict[str, float] = {
     # High-impact events
-    "launch": 3.0,
-    "release": 3.0,
-    "announce": 2.5,
-    "unveil": 3.0,
-    "breakthrough": 3.5,
+    "contract": 3.5,
+    "awarded": 3.5,
+    "epc": 3.0,
+    "feed": 2.5,
+    "project": 2.0,
     "acquisition": 3.0,
     "acquire": 3.0,
     "merger": 3.0,
     "ipo": 3.5,
     "funding": 2.5,
-    "raises": 2.5,
     "valuation": 2.5,
     "billion": 2.0,
     "million": 1.5,
     # Breaking / urgent
     "breaking": 4.0,
-    "urgent": 3.5,
     "exclusive": 3.0,
-    "leaked": 2.5,
-    # Product & tech
-    "model": 1.5,
-    "api": 1.5,
-    "open source": 2.0,
-    "benchmark": 2.0,
-    "safety": 2.0,
-    "regulation": 2.0,
+    # Sector-specific
+    "lng": 2.5,
+    "refinery": 2.0,
+    "petrochemical": 2.0,
+    "hydrogen": 2.5,
+    "carbon capture": 3.0,
+    "ccus": 3.0,
+    "offshore": 2.0,
+    "onshore": 1.5,
+    "subsea": 2.0,
+    "pipeline": 1.5,
+    "modular": 2.0,
+    "floating": 2.0,
+    "fpso": 2.5,
+    "decarbonization": 2.5,
+    "energy transition": 2.5,
+    "green hydrogen": 3.0,
+    "blue hydrogen": 2.5,
+    "ammonia": 2.0,
+    "ethylene": 2.0,
+    "downstream": 1.5,
+    "upstream": 1.5,
+    "midstream": 1.5,
+    # Business
     "partnership": 2.0,
-    "compete": 1.5,
-    "sued": 2.5,
-    "lawsuit": 2.5,
-    "ban": 2.5,
-    "shutdown": 3.0,
+    "joint venture": 2.5,
+    "jv": 2.0,
+    "backlog": 2.5,
+    "revenue": 2.0,
+    "earnings": 2.0,
+    "quarterly results": 2.5,
+    "order intake": 3.0,
+    "capex": 2.0,
     # Leadership
     "ceo": 2.0,
     "fired": 3.0,
     "resigned": 3.0,
+    "appointed": 2.5,
     "hired": 2.0,
+    # Risk / disruption
+    "delay": 2.5,
+    "overrun": 2.5,
+    "safety": 2.0,
+    "incident": 2.5,
+    "regulation": 2.0,
+    "sanction": 3.0,
+    "lawsuit": 2.5,
+    "investigation": 2.5,
+    "bankruptcy": 3.5,
+    "restructuring": 3.0,
+    "layoff": 2.5,
+    "shutdown": 3.0,
 }
 
 # ─── RSS Sources ──────────────────────────────────────────────────────────────
+# Energy, Oil & Gas, and EPC industry feeds
 RSS_FEEDS: list[dict[str, str]] = [
-    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/"},
-    {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml"},
-    {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index"},
+    {"name": "Rigzone", "url": "https://www.rigzone.com/news/rss/rigzone_latest.aspx"},
+    {"name": "Offshore Engineer", "url": "https://www.oedigital.com/rss"},
+    {"name": "Offshore Energy", "url": "https://www.offshore-energy.biz/feed/"},
+    {"name": "NS Energy", "url": "https://www.nsenergybusiness.com/feed/"},
+    {"name": "Hydrocarbons Technology", "url": "https://www.hydrocarbons-technology.com/feed/"},
+    {"name": "Chemical Engineering", "url": "https://www.chemengonline.com/feed/"},
+    {"name": "Process Engineering", "url": "https://www.thechemicalengineer.com/rss"},
+    {"name": "Oil & Gas 360", "url": "https://www.oilandgas360.com/feed/"},
+    {"name": "Utility Dive", "url": "https://www.utilitydive.com/feeds/news/"},
     {"name": "Hacker News", "url": "https://hnrss.org/frontpage"},
-    {"name": "MIT Tech Review", "url": "https://www.technologyreview.com/feed/"},
-    {"name": "VentureBeat", "url": "https://venturebeat.com/feed/"},
-    {"name": "The Information (AI)", "url": "https://www.theinformation.com/feed"},
-    {"name": "AI News", "url": "https://www.artificialintelligence-news.com/feed/"},
 ]
 
 # ─── Application Settings ────────────────────────────────────────────────────

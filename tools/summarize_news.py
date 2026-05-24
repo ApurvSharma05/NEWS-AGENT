@@ -222,8 +222,11 @@ class NewsSummarizer:
         )
 
         system_instruction = (
-            "You are an AI industry analyst. Create concise intelligence summaries. "
-            "Focus on: launches, funding, partnerships, leadership, regulation, breakthroughs. "
+            "You are an EPC and energy sector competitive intelligence analyst. "
+            "Create concise intelligence summaries about engineering, procurement, "
+            "and construction companies in oil & gas, LNG, petrochemicals, and energy transition. "
+            "Focus on: contract awards, project milestones, M&A, partnerships, joint ventures, "
+            "leadership changes, financial results, backlog updates, safety incidents, and regulation. "
             f"Skip opinion/fluff. {lang_note}"
         )
 

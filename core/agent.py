@@ -1,9 +1,9 @@
 """
-Orchestrator agent for the AI News Monitoring pipeline.
+Orchestrator agent for the EPC Competitor News Monitoring pipeline.
 
 Coordinates the full daily digest workflow:
-  1. Fetch RSS articles
-  2. Filter by tracked companies
+  1. Fetch RSS articles from energy/EPC industry sources
+  2. Filter by tracked competitors (Technip Energies NV peers)
   3. Deduplicate via SQLite
   4. Score importance
   5. Summarize with LLM
@@ -71,7 +71,7 @@ class NewsAgent:
 
         if not raw_articles:
             logger.warning("No articles fetched. Sending empty-digest notice.")
-            self.sender.send_message("📭 *AI Competitor Digest*\n\nNo articles found today.")
+            self.sender.send_message("📭 *EPC Competitor Digest*\n\nNo articles found today.")
             return
 
         # Step 2 — Filter by tracked companies
@@ -81,7 +81,7 @@ class NewsAgent:
         if not filtered:
             logger.info("No relevant articles today. Sending notice.")
             self.sender.send_message(
-                "📭 *AI Competitor Digest*\n\nNo relevant competitor news found today."
+                "📭 *EPC Competitor Digest*\n\nNo relevant competitor news found today."
             )
             return
 
@@ -134,7 +134,7 @@ class NewsAgent:
         Format summaries into a clean, company-grouped Telegram digest.
         """
         today = datetime.now().strftime("%B %d, %Y")
-        lines = [f"🤖 *AI Competitor Digest — {today}*\n"]
+        lines = [f"*EPC Competitor Digest -- {today}*\n"]
 
         # Group by company
         company_groups: dict[str, list[dict]] = {}
