@@ -1,13 +1,13 @@
 """
-Orchestrator agent for the EPC Competitor News Monitoring pipeline.
+Orchestrator agent for the EPC Competitor Intelligence pipeline.
 
 Coordinates the full daily digest workflow:
-  1. Fetch RSS articles from energy/EPC industry sources
-  2. Filter by tracked competitors (Technip Energies NV peers)
-  3. Deduplicate via SQLite
-  4. Score importance
-  5. Summarize with LLM
-  6. Format and send digest via Telegram
+  1. Fetch RSS articles from 24+ energy/EPC industry sources
+  2. Filter by 15 tracked competitors using fuzzy alias matching
+  3. Deduplicate against SQLite history (never sends the same article twice)
+  4. Score importance using 50+ weighted industry keywords
+  5. Summarize top 10 articles with Groq LLM for strategic implications
+  6. Format and deliver a tight, scannable briefing via Telegram
 """
 
 import logging

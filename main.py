@@ -2,17 +2,17 @@
 """
 EPC Competitor Intelligence Agent — Entry Point
 
-Run this script daily (via cron or scheduler) to:
-  1. Fetch news from RSS feeds
-  2. Filter articles about tracked EPC competitors
-  3. Summarize with an LLM for strategic implications
-  4. Send a digest to Telegram
+An autonomous AI-powered competitive intelligence system that monitors
+880+ news sources daily, extracts strategic implications using LLM analysis,
+and delivers actionable briefings via Telegram.
 
 Usage:
     python main.py              # Run daily digest
     python main.py --test       # Test Telegram connectivity
     python main.py --status     # Show database stats
 """
+
+__version__ = "2.0.0"
 
 import argparse
 import io

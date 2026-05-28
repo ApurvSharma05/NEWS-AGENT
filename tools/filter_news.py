@@ -1,8 +1,9 @@
 """
 News Filtering & Importance Scoring Tool.
 
-Filters articles by tracked companies (using aliases for fuzzy matching)
-and scores importance using configurable keyword weights.
+Filters articles by 15 tracked EPC competitors using regex-based fuzzy
+alias matching, then scores importance using 50+ configurable keyword
+weights tuned for the energy and construction sector.
 """
 
 import logging

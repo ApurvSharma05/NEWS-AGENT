@@ -1,167 +1,124 @@
-# 🤖 AI News Monitoring Agent
+# 🏗️ EPC Competitor Intelligence Agent
 
-A production-ready Python agent that monitors tech/AI news daily, filters articles about specific competitor companies, summarizes them with an LLM, and delivers a clean digest to Telegram.
+An autonomous AI-powered competitive intelligence system that monitors **880+ news sources daily**, extracts strategic implications using **Llama 3.3 70B** via Groq, and delivers actionable briefings to Telegram — built for the EPC (Engineering, Procurement & Construction) energy sector.
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![LLM: Groq](https://img.shields.io/badge/LLM-Groq%20%7C%20Llama%203.3-orange.svg)
+![Delivery: Telegram](https://img.shields.io/badge/Delivery-Telegram-26A5E4.svg)
 
 ---
 
-## 📋 Table of Contents
+## 🎯 What It Does
 
-- [Features](#features)
-- [Architecture](#architecture)
-- [Setup Guide](#setup-guide)
-  - [1. Prerequisites](#1-prerequisites)
-  - [2. Clone & Install](#2-clone--install)
-  - [3. Google Gemini API Setup](#3-google-gemini-api-setup)
-  - [4. Telegram Bot Setup](#4-telegram-bot-setup)
-  - [5. Configure Environment](#5-configure-environment)
-- [Running Locally](#running-locally)
-- [Automating Daily Execution](#automating-daily-execution)
-  - [Linux/macOS (cron)](#linuxmacos-cron)
-  - [Windows (Task Scheduler)](#windows-task-scheduler)
-- [Deploying to Cloud](#deploying-to-cloud)
-  - [Railway](#railway)
-  - [Render](#render)
-- [Extending into a Real AI Agent](#extending-into-a-real-ai-agent)
-- [Configuration Reference](#configuration-reference)
+This agent acts as a **Senior Strategy Analyst** — it doesn't just summarize news, it tells you *why it matters* to your competitive position:
+
+```
+⚡ Fluor, JGC Holdings: Fluor-JGC JV awarded FEED contract for
+  LNG Canada Phase 2 expansion (28 MTPA capacity doubling).
+💡 Implication: Solidifies the Fluor-JGC partnership's dominance in
+  North American LNG, intensifying competition for Technip Energies
+  in securing future large-scale LNG FEED and EPC contracts.
+🔗 Source
+```
+
+> **Key Differentiator:** Unlike generic news aggregators, every article is analyzed through a competitive lens — scoring importance, extracting strategic implications, and highlighting direct threats to your market position.
 
 ---
 
-## ✨ Features
+## ✨ Technical Highlights
 
-| Feature | Description |
-|---------|-------------|
-| 📰 **Multi-source RSS** | Fetches from TechCrunch, The Verge, Ars Technica, HN, and more |
-| 🎯 **Smart Filtering** | Fuzzy company matching with aliases (e.g., "ChatGPT" → OpenAI) |
-| 🧠 **LLM Summarization** | Ultra-tight, highly critical strategic implications via Groq API |
-| 📊 **Importance Scoring** | Keyword-weighted ranking with breaking news detection |
-| 🔄 **Deduplication** | SQLite-backed, never sends the same article twice |
-| 📱 **Telegram Delivery** | Clean, formatted daily digest to your phone |
-| 🌐 **Hindi Support** | Optional Hindi summaries with technical terms in English |
-| 🔧 **Modular Tools** | Each component is a standalone, reusable tool |
+| Feature | Implementation |
+|---------|---------------|
+| **Multi-source Ingestion** | 24+ RSS feeds (8 industry publications + 15 Google News competitor searches) |
+| **Fuzzy Entity Matching** | Regex-based alias system (e.g., `"SNC-Lavalin"` → `AtkinsRealis`, `"CB&I"` → `McDermott`) |
+| **Keyword-Weighted Scoring** | 50+ industry-specific keywords with configurable weights and title multipliers |
+| **LLM Strategic Analysis** | Groq API (Llama 3.3 70B) with JSON mode for structured implication extraction |
+| **Production Rate Limiting** | Exponential backoff (3^n), smart batching, inter-batch cooldown, auto-retry on 429/5xx |
+| **Deduplication** | SQLite-backed — never sends the same article twice across runs |
+| **Summary Caching** | Avoids redundant LLM API calls; cached summaries persist across pipeline runs |
+| **Graceful Degradation** | Falls back to raw summaries if LLM fails after retries — digest always ships |
+| **Breaking News Detection** | Configurable importance threshold flags high-priority articles with 🔴 |
+| **Multi-language Support** | English and Hindi output (technical terms preserved in English) |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-main.py                 → CLI entry point (digest / test / status)
-  └─ core/agent.py      → Orchestrator (runs the pipeline)
-       ├─ tools/fetch_rss.py       → RSS feed fetcher
-       ├─ tools/filter_news.py     → Company filter + importance scorer
-       ├─ tools/database.py        → SQLite dedup + storage
-       ├─ tools/summarize_news.py  → Groq summarizer
-       └─ tools/send_telegram.py   → Telegram delivery
-  └─ core/config.py     → Centralized configuration
+main.py                     → CLI entry point (digest / test / status)
+  └─ core/agent.py          → Pipeline orchestrator (7-step workflow)
+       ├─ tools/fetch_rss.py        → RSS ingestion (880+ articles/run)
+       ├─ tools/filter_news.py      → Entity matching + importance scoring
+       ├─ tools/database.py         → SQLite dedup + summary cache
+       ├─ tools/summarize_news.py   → Groq LLM strategic analysis engine
+       └─ tools/send_telegram.py    → Telegram delivery (auto-chunking)
+  └─ core/config.py         → Centralized configuration (env + defaults)
+```
+
+### Pipeline Flow
+
+```
+880+ articles → Company Filter (741) → Dedup (616 new) → Score & Rank
+  → Top 10 → Groq LLM Analysis → Strategic Briefing → Telegram
 ```
 
 ---
 
-## 🚀 Setup Guide
+## 🚀 Quick Start
 
-### 1. Prerequisites
+### Prerequisites
 
-- **Python 3.11+** (tested on 3.11, 3.12, 3.13)
-- A **Telegram account**
-- A **Groq API key** (free at [console.groq.com/keys](https://console.groq.com/keys))
+- **Python 3.11+**
+- **Groq API key** — free at [console.groq.com/keys](https://console.groq.com/keys)
+- **Telegram Bot Token** — via [@BotFather](https://t.me/BotFather)
 
-### 2. Clone & Install
+### Setup
 
 ```bash
-# Navigate to the project
 cd news-agent
 
-# Create a virtual environment
+# Create & activate virtual environment
 python -m venv venv
-
-# Activate it
-# Linux/macOS:
-source venv/bin/activate
-# Windows:
-venv\Scripts\activate
+source venv/bin/activate        # Linux/macOS
+venv\Scripts\activate           # Windows
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure
+cp .env.example .env
+# Edit .env with your API keys
 ```
 
-### 3. Groq API Setup
-
-1. Go to [console.groq.com/keys](https://console.groq.com/keys)
-2. Sign in or create an account
-3. Click **"Create API Key"**
-4. Copy the key
-
-> **💡 Cost:** Groq offers a generous free tier that is extremely fast—more than enough for daily digests. Zero cost!
-
-### 4. Telegram Bot Setup
-
-#### Create the Bot
-
-1. Open Telegram and search for **@BotFather**
-2. Send `/newbot`
-3. Choose a name (e.g., "AI News Digest")
-4. Choose a username (e.g., `ai_news_digest_bot`)
-5. Copy the **bot token** (format: `123456789:ABCdef...`)
-
-#### Get Your Chat ID
-
-1. Send any message to your new bot
-2. Open this URL in your browser (replace `<TOKEN>` with your bot token):
-   ```
-   https://api.telegram.org/bot<TOKEN>/getUpdates
-   ```
-3. Find `"chat":{"id": <YOUR_CHAT_ID>}` in the response
-4. Copy the chat ID (a number like `123456789`)
-
-#### For a Channel
-
-1. Create a Telegram channel
-2. Add your bot as an **administrator**
-3. The chat ID for channels is `@channel_username` or the numeric ID
-
-### 5. Configure Environment
+### Run
 
 ```bash
-# Copy the example file
-cp .env.example .env
-
-# Edit with your values
-# Linux/macOS: nano .env
-# Windows: notepad .env
-```
-
-Fill in these **required** values:
-```env
-GROQ_API_KEY=your-groq-api-key
-TELEGRAM_BOT_TOKEN=123456789:ABCdef...
-TELEGRAM_CHAT_ID=your-chat-id
+python main.py              # Run daily digest
+python main.py --test       # Test Telegram connectivity
+python main.py --status     # Show database stats
 ```
 
 ---
 
-## 🏃 Running Locally
+## 📱 Telegram Bot Setup
 
-```bash
-# Run the daily digest
-python main.py
+### Create the Bot
 
-# Test Telegram connectivity
-python main.py --test
+1. Open Telegram → search **@BotFather** → send `/newbot`
+2. Choose a name and username
+3. Copy the **bot token** (format: `123456789:ABCdef...`)
 
-# Check database status
-python main.py --status
-```
+### Get Your Chat ID
 
-### What happens when you run the digest:
+1. Send any message to your new bot
+2. Visit: `https://api.telegram.org/bot<TOKEN>/getUpdates`
+3. Find `"chat":{"id": <YOUR_CHAT_ID>}` in the response
 
-1. Fetches articles from 8+ RSS feeds
-2. Filters for mentions of tracked companies
-3. Removes articles you've already seen
-4. Scores articles by importance (highlights breaking news)
-5. Sends the top 10 most critical articles to Groq to extract strategic implications
-6. Formats and delivers a tight, scannable briefing to Telegram
+### For Channels
+
+1. Create a channel → add your bot as **administrator**
+2. Use `@channel_username` or the numeric ID as `TELEGRAM_CHAT_ID`
 
 ---
 
@@ -170,98 +127,73 @@ python main.py --status
 ### Linux/macOS (cron)
 
 ```bash
-# Open crontab editor
-crontab -e
-
-# Add this line to run at 8 AM daily:
+# Run at 8 AM daily
 0 8 * * * cd /path/to/news-agent && /path/to/venv/bin/python main.py >> /var/log/news-agent.log 2>&1
 
-# For twice-daily (8 AM and 6 PM):
+# Twice daily (8 AM and 6 PM)
 0 8,18 * * * cd /path/to/news-agent && /path/to/venv/bin/python main.py >> /var/log/news-agent.log 2>&1
 ```
 
 ### Windows (Task Scheduler)
 
 1. Open **Task Scheduler** (`taskschd.msc`)
-2. Click **"Create Basic Task"**
-3. Name: `AI News Digest`
-4. Trigger: **Daily** at your preferred time
-5. Action: **Start a program**
+2. **Create Basic Task** → Name: `EPC Intelligence Agent`
+3. Trigger: **Daily** at your preferred time
+4. Action: **Start a program**
    - Program: `C:\path\to\news-agent\venv\Scripts\python.exe`
    - Arguments: `main.py`
    - Start in: `C:\path\to\news-agent`
-6. Click **Finish**
 
 ---
 
-## ☁️ Deploying to Cloud
+## ☁️ Cloud Deployment
 
 ### Railway
 
-1. Install the Railway CLI:
-   ```bash
-   npm install -g @railway/cli
-   ```
+```json
+// railway.json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": { "builder": "NIXPACKS" },
+  "deploy": {
+    "numReplicas": 1,
+    "restartPolicyType": "ON_FAILURE",
+    "cronSchedule": "0 8 * * *"
+  }
+}
+```
 
-2. Create a `Procfile`:
-   ```
-   worker: python main.py
-   ```
-
-3. Create a `railway.json`:
-   ```json
-   {
-     "$schema": "https://railway.app/railway.schema.json",
-     "build": { "builder": "NIXPACKS" },
-     "deploy": {
-       "numReplicas": 1,
-       "restartPolicyType": "ON_FAILURE",
-       "cronSchedule": "0 8 * * *"
-     }
-   }
-   ```
-
-4. Deploy:
-   ```bash
-   railway login
-   railway init
-   railway up
-   ```
-
-5. Set environment variables in the Railway dashboard (Settings → Variables).
+```bash
+railway login && railway init && railway up
+```
 
 ### Render
 
-1. Create a `render.yaml`:
-   ```yaml
-   services:
-     - type: cron
-       name: ai-news-agent
-       runtime: python
-       schedule: "0 8 * * *"
-       buildCommand: pip install -r requirements.txt
-       startCommand: python main.py
-       envVars:
-         - key: GROQ_API_KEY
-           sync: false
-         - key: TELEGRAM_BOT_TOKEN
-           sync: false
-         - key: TELEGRAM_CHAT_ID
-           sync: false
-   ```
-
-2. Push to GitHub and connect the repo in [Render Dashboard](https://dashboard.render.com).
-3. Render will auto-detect the `render.yaml` and set up the cron job.
+```yaml
+# render.yaml
+services:
+  - type: cron
+    name: epc-intelligence-agent
+    runtime: python
+    schedule: "0 8 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+```
 
 ---
 
-## 🔮 Extending into a Real AI Agent
+## 🔮 Extending the Agent
 
-The modular tool-based architecture makes this easy to extend into a full AI agent:
+The modular tool-based architecture makes this easy to extend:
 
-### 1. Add New Tools
-
-Create a new file in `tools/` with a class that follows the same pattern:
+### Add New Tools
 
 ```python
 # tools/analyze_sentiment.py
@@ -271,7 +203,7 @@ class SentimentAnalyzer:
         ...
 ```
 
-### 2. Build a Tool Registry
+### Build a Tool Registry
 
 ```python
 # core/tool_registry.py
@@ -281,30 +213,21 @@ class ToolRegistry:
 
     def register(self, name: str, tool: Any):
         self.tools[name] = tool
-
-    def get(self, name: str):
-        return self.tools.get(name)
 ```
 
-### 3. Add an LLM-Driven Planner
-
-Let the agent decide which tools to use based on the task:
+### Add an LLM-Driven Planner
 
 ```python
-# The LLM receives a list of available tools and decides the execution plan
+# Let the agent autonomously decide which tools to use
 tools = ["fetch_rss", "filter_news", "summarize", "send_telegram", "analyze_sentiment"]
 plan = llm.plan(task="Generate daily digest with sentiment analysis", tools=tools)
 ```
 
-### 4. Add Memory & Conversation
+### Future Directions
 
-- Use SQLite or Redis for long-term memory
-- Track which articles the user found useful
-- Learn preferences over time
-
-### 5. Add More Delivery Channels
-
-Swap `TelegramSender` for `SlackSender`, `DiscordSender`, or `EmailSender` — all following the same interface.
+- **Memory & Learning** — Track which articles the user found useful, learn preferences over time
+- **Multi-channel Delivery** — Swap `TelegramSender` for `SlackSender`, `DiscordSender`, or `EmailSender`
+- **Dashboard** — Build a web UI on top of the SQLite article database
 
 ---
 
@@ -312,15 +235,17 @@ Swap `TelegramSender` for `SlackSender`, `DiscordSender`, or `EmailSender` — a
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `GROQ_API_KEY` | ✅ | — | Groq API key (free) |
-| `GROQ_MODEL` | ❌ | `llama-3.3-70b-versatile` | Model for summarization |
-| `TELEGRAM_BOT_TOKEN` | ✅ | — | Telegram bot token |
-| `TELEGRAM_CHAT_ID` | ✅ | — | Target chat/channel ID |
-| `TRACKED_COMPANIES` | ❌ | 6 defaults | Comma-separated company list |
-| `MAX_ARTICLES_PER_FEED` | ❌ | `50` | Max articles per RSS feed |
-| `DIGEST_MAX_ARTICLES` | ❌ | `10` | Max articles in digest |
-| `BREAKING_NEWS_THRESHOLD` | ❌ | `8.5` | Score threshold for 🔴 flag |
-| `SUMMARY_LANGUAGE` | ❌ | `english` | `english` or `hindi` |
+| `GROQ_API_KEY` | ✅ | — | Groq API key ([free tier](https://console.groq.com/keys)) |
+| `GROQ_MODEL` | ❌ | `llama-3.3-70b-versatile` | LLM model for strategic analysis |
+| `TELEGRAM_BOT_TOKEN` | ✅ | — | Telegram bot token via @BotFather |
+| `TELEGRAM_CHAT_ID` | ✅ | — | Target chat/channel ID (comma-separated for multi-chat) |
+| `TRACKED_COMPANIES` | ❌ | 15 EPC competitors | Comma-separated company list |
+| `MAX_ARTICLES_PER_FEED` | ❌ | `50` | Max articles fetched per RSS feed |
+| `DIGEST_MAX_ARTICLES` | ❌ | `10` | Max articles in daily briefing |
+| `BREAKING_NEWS_THRESHOLD` | ❌ | `8.5` | Importance score threshold for 🔴 flag |
+| `SUMMARY_LANGUAGE` | ❌ | `english` | Output language (`english` or `hindi`) |
+| `GROQ_BATCH_SIZE` | ❌ | `10` | Articles per LLM API call |
+| `GROQ_RETRY_ATTEMPTS` | ❌ | `3` | Max retry attempts on API failure |
 | `LOG_LEVEL` | ❌ | `INFO` | Logging verbosity |
 
 ---
@@ -331,22 +256,22 @@ Swap `TelegramSender` for `SlackSender`, `DiscordSender`, or `EmailSender` — a
 news-agent/
 ├── core/
 │   ├── __init__.py
-│   ├── config.py           # Centralized configuration
-│   └── agent.py            # Pipeline orchestrator
+│   ├── config.py              # Centralized configuration (companies, feeds, weights)
+│   └── agent.py               # 7-step pipeline orchestrator
 ├── tools/
 │   ├── __init__.py
-│   ├── fetch_rss.py        # RSS feed fetcher
-│   ├── filter_news.py      # Company filter + scorer
-│   ├── summarize_news.py   # LLM summarizer
-│   ├── send_telegram.py    # Telegram delivery
-│   └── database.py         # SQLite dedup + storage
+│   ├── fetch_rss.py           # RSS ingestion (24+ feeds)
+│   ├── filter_news.py         # Entity matching + importance scoring
+│   ├── summarize_news.py      # Groq LLM strategic analysis engine
+│   ├── send_telegram.py       # Telegram delivery with auto-chunking
+│   └── database.py            # SQLite dedup + summary cache
 ├── data/
-│   └── news.db             # SQLite database (auto-created)
-├── .env                    # Your secrets (never commit!)
-├── .env.example            # Template for .env
-├── requirements.txt        # Python dependencies
-├── main.py                 # CLI entry point
-└── README.md               # This file
+│   └── news.db                # SQLite database (auto-created)
+├── .env                       # Secrets (never committed)
+├── .env.example               # Template for .env
+├── requirements.txt           # Python dependencies
+├── main.py                    # CLI entry point
+└── README.md
 ```
 
 ---

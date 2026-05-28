@@ -1,8 +1,9 @@
 """
 Telegram Delivery Tool.
 
-Sends formatted messages to a Telegram chat/channel via the Bot API.
-Designed as a standalone tool that can be swapped for Slack, Discord, etc.
+Sends formatted competitive intelligence briefings to Telegram chats/channels
+via the Bot API. Supports Markdown formatting, multi-chat broadcast, and
+automatic message splitting for Telegram's 4096-char limit.
 """
 
 import logging

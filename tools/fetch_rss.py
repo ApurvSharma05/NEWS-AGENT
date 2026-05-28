@@ -1,8 +1,9 @@
 """
 RSS Feed Fetcher Tool.
 
-Fetches and normalizes articles from configured RSS feeds.
-Designed as a standalone tool that can be reused by any agent.
+Fetches and normalizes articles from 24+ configured RSS feeds including
+8 industry publications and 15 Google News competitor-specific searches.
+Designed as a standalone, reusable tool module.
 """
 
 import logging

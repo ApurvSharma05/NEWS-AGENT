@@ -1,3 +1,11 @@
+"""
+SQLite Database Tool — Deduplication & Caching Layer.
+
+Provides persistent storage for article deduplication (never sends the
+same article twice) and LLM summary caching (avoids redundant API calls
+across runs). Uses the article URL as the unique key.
+"""
+
 import json
 import logging
 import sqlite3

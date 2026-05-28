@@ -1,4 +1,4 @@
-# AI News Monitoring Agent — Dependencies
+# EPC Competitor Intelligence Agent — Dependencies
 feedparser>=6.0.0
 requests>=2.31.0
 beautifulsoup4>=4.12.0

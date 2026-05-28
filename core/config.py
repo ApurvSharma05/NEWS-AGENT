@@ -1,8 +1,9 @@
 """
-Configuration module for the Competitor News Monitoring Agent.
+Centralized configuration for the EPC Competitor Intelligence Agent.
 
-Centralizes all configuration: environment variables, tracked companies,
-RSS sources, keyword weights, and application settings.
+Manages environment variables, tracked companies with fuzzy alias matching,
+24+ RSS/Google News sources, keyword-weighted importance scoring, and
+Groq LLM rate-limiting parameters.
 
 Configured to monitor Technip Energies NV's key competitors in the
 EPC (Engineering, Procurement & Construction) / Energy sector.

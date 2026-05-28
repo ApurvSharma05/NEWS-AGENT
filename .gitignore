@@ -1,7 +1,8 @@
-# Environment
+# Environment & secrets
 .env
 venv/
 .venv/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -10,10 +11,10 @@ __pycache__/
 dist/
 build/
 
-# Database
+# Database (auto-generated)
 data/news.db
 
-# Logs
+# Logs (auto-generated)
 *.log
 
 # IDE

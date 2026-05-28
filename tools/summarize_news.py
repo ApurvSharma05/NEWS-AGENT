@@ -1,10 +1,10 @@
 """
-LLM Summarization Tool — Production-grade with rate limiting.
+LLM Summarization Tool — Strategic Implication Engine.
 
-Uses the Groq API to generate concise, actionable summaries
-of news articles for the daily digest.
+Uses the Groq API (Llama 3.3 70B) to generate ultra-tight competitive
+intelligence summaries with strategic implications for each article.
 
-Rate-limit resilient:
+Production-grade features:
   - Exponential backoff retry on 429/500/503 errors
   - Smart batching (chunks of GROQ_BATCH_SIZE articles per API call)
   - Inter-batch cooldown to respect RPM limits
