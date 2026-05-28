@@ -1,12 +1,12 @@
 """
 LLM Summarization Tool — Production-grade with rate limiting.
 
-Uses the Google Gemini API to generate concise, actionable summaries
+Uses the Groq API to generate concise, actionable summaries
 of news articles for the daily digest.
 
 Rate-limit resilient:
   - Exponential backoff retry on 429/500/503 errors
-  - Smart batching (chunks of GEMINI_BATCH_SIZE articles per API call)
+  - Smart batching (chunks of GROQ_BATCH_SIZE articles per API call)
   - Inter-batch cooldown to respect RPM limits
   - Summary caching via SQLite to avoid redundant API calls
   - Graceful fallback to raw summaries on persistent failure
@@ -20,29 +20,29 @@ from typing import Any
 import requests
 
 from core.config import (
-    GEMINI_API_KEY,
-    GEMINI_MODEL,
-    GEMINI_BATCH_SIZE,
-    GEMINI_RETRY_ATTEMPTS,
-    GEMINI_RETRY_BASE_DELAY,
-    GEMINI_COOLDOWN_DELAY,
+    GROQ_API_KEY,
+    GROQ_MODEL,
+    GROQ_BATCH_SIZE,
+    GROQ_RETRY_ATTEMPTS,
+    GROQ_RETRY_BASE_DELAY,
+    GROQ_COOLDOWN_DELAY,
 )
 
 logger = logging.getLogger(__name__)
 
-# Gemini API endpoint (REST, no SDK required)
-_GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+# Groq API endpoint (REST, no SDK required)
+_GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # HTTP status codes that should trigger a retry
 _RETRYABLE_STATUS_CODES = {429, 500, 502, 503}
 
 # Cooldown between batch API calls (seconds) to stay under RPM
-_INTER_BATCH_COOLDOWN = GEMINI_COOLDOWN_DELAY
+_INTER_BATCH_COOLDOWN = GROQ_COOLDOWN_DELAY
 
 
 class NewsSummarizer:
     """
-    Summarizes news articles using Google's Gemini API.
+    Summarizes news articles using Groq API.
 
     Production-grade features:
       - Exponential backoff with jitter on rate limit errors
@@ -56,15 +56,15 @@ class NewsSummarizer:
         api_key: str | None = None,
         model: str | None = None,
     ) -> None:
-        self.api_key = api_key or GEMINI_API_KEY
-        self.model = model or GEMINI_MODEL
-        self.max_retries = GEMINI_RETRY_ATTEMPTS
-        self.base_delay = GEMINI_RETRY_BASE_DELAY
+        self.api_key = api_key or GROQ_API_KEY
+        self.model = model or GROQ_MODEL
+        self.max_retries = GROQ_RETRY_ATTEMPTS
+        self.base_delay = GROQ_RETRY_BASE_DELAY
 
         if not self.api_key:
             raise ValueError(
-                "Gemini API key is required for summarization. "
-                "Get one free at https://aistudio.google.com/apikey"
+                "Groq API key is required for summarization. "
+                "Get one at https://console.groq.com/keys"
             )
 
     # ── Public API ────────────────────────────────────────────────────────
@@ -126,12 +126,12 @@ class NewsSummarizer:
             return cached_summaries
 
         # ── Step 2: Split uncached articles into manageable batches ───────
-        batches = self._split_into_batches(uncached_articles, GEMINI_BATCH_SIZE)
+        batches = self._split_into_batches(uncached_articles, GROQ_BATCH_SIZE)
         logger.info(
             "Splitting %d uncached articles into %d batch(es) of ≤%d.",
             len(uncached_articles),
             len(batches),
-            GEMINI_BATCH_SIZE,
+            GROQ_BATCH_SIZE,
         )
 
         # ── Step 3: Process each batch with rate-limit-aware calls ───────
@@ -185,12 +185,12 @@ class NewsSummarizer:
         language: str,
     ) -> list[dict]:
         """
-        Summarize a single batch of articles (≤ GEMINI_BATCH_SIZE).
+        Summarize a single batch of articles (≤ GROQ_BATCH_SIZE).
         Includes retry logic with exponential backoff.
         """
         system_instruction, user_prompt = self._build_prompts(articles, language)
 
-        raw_response = self._call_gemini_with_retry(system_instruction, user_prompt)
+        raw_response = self._call_groq_with_retry(system_instruction, user_prompt)
         summaries = self._parse_response(raw_response, articles)
         return summaries
 
@@ -199,7 +199,7 @@ class NewsSummarizer:
         articles: list[dict[str, Any]],
         language: str,
     ) -> tuple[str, str]:
-        """Build compact, token-efficient prompts for the Gemini API."""
+        """Build compact, token-efficient prompts for the API."""
 
         # Compact article descriptions to minimize tokens
         article_lines = []
@@ -223,35 +223,33 @@ class NewsSummarizer:
 
         system_instruction = (
             "You are a Senior Strategy Analyst at Technip Energies NV. "
-            "Create concise competitive intelligence summaries about your EPC peers "
-            "(e.g., Saipem, Fluor, Bechtel, Wood, MAIRE). "
-            "Focus strictly on strategic value: contract awards, project milestones, M&A, "
-            "partnerships, leadership changes, financial results, and energy transition moves. "
-            f"Skip opinion/fluff. {lang_note}"
+            "You provide ultra-tight, highly critical competitive intelligence updates about your EPC peers. "
+            "Focus ruthlessly on the strategic implication of the news. Why does this matter to Technip Energies? "
+            f"Skip all fluff. {lang_note}"
         )
 
         user_prompt = (
-            f"Summarize these {len(articles)} competitor articles (1-2 sentences each).\n"
-            "For each, assign a 'category' (choose from: CONTRACT_WIN, M&A, EXPANSION, LEADERSHIP, FINANCIAL, RISK, TECH_CAPABILITY, PARTNERSHIP, OTHER).\n"
-            "Also provide a 'strategic_implication' (1 sentence: what this means for Technip Energies' competitive position).\n"
-            "CRITICAL: You must return a STRICTLY VALID JSON array. Do not use trailing commas. Ensure all property names are enclosed in double quotes.\n"
-            "Return JSON array exactly like this: [{\"title\":\"string\",\"summary\":\"string\","
-            "\"companies\":[\"string\"],\"importance_score\":0.0,\"link\":\"string\","
-            "\"category\":\"string\",\"strategic_implication\":\"string\"}]\n\n"
+            f"Analyze these {len(articles)} competitor articles.\n"
+            "For each, provide an ultra-tight 'summary' (max 1 sentence) of the facts.\n"
+            "Then, provide a bold, highly-critical 'strategic_implication' (max 2 sentences: exactly how this threatens or impacts Technip Energies' market position, upcoming bids, or strategy).\n"
+            "CRITICAL INSTRUCTION: You must output ONLY a valid JSON object and nothing else. No markdown formatting, no explanations.\n"
+            "The JSON object must have exactly one key called 'summaries' which contains a list of objects.\n"
+            "Each object must have these string keys: 'title', 'summary', 'link', 'strategic_implication'.\n"
+            "It must also have an array of strings 'companies', and a float 'importance_score'.\n\n"
             f"{articles_text}"
         )
 
         return system_instruction, user_prompt
 
-    # ── Private: Gemini API call with exponential backoff ─────────────────
+    # ── Private: API call with exponential backoff ─────────────────
 
-    def _call_gemini_with_retry(
+    def _call_groq_with_retry(
         self,
         system_instruction: str,
         user_prompt: str,
     ) -> str:
         """
-        Make a Gemini API call with exponential backoff retry.
+        Make an API call with exponential backoff retry.
 
         Retry strategy:
           - Attempt 1: immediate
@@ -265,7 +263,7 @@ class NewsSummarizer:
 
         for attempt in range(1, self.max_retries + 1):
             try:
-                return self._call_gemini(system_instruction, user_prompt)
+                return self._call_groq(system_instruction, user_prompt)
 
             except requests.exceptions.HTTPError as exc:
                 status_code = exc.response.status_code if exc.response is not None else 0
@@ -273,7 +271,7 @@ class NewsSummarizer:
                 if status_code not in _RETRYABLE_STATUS_CODES:
                     # Non-retryable error (400, 401, 403, etc.) — fail immediately
                     logger.error(
-                        "Non-retryable Gemini error (HTTP %d): %s",
+                        "Non-retryable API error (HTTP %d): %s",
                         status_code,
                         exc,
                     )
@@ -285,7 +283,7 @@ class NewsSummarizer:
                     # Exponential backoff: delay * 3^(attempt-1)
                     delay = self.base_delay * (3 ** (attempt - 1))
                     logger.warning(
-                        "Gemini 429/5xx (attempt %d/%d). "
+                        "API 429/5xx (attempt %d/%d). "
                         "Retrying in %.1fs... [HTTP %d]",
                         attempt,
                         self.max_retries,
@@ -295,7 +293,7 @@ class NewsSummarizer:
                     time.sleep(delay)
                 else:
                     logger.error(
-                        "Gemini API failed after %d attempts. Last error: HTTP %d",
+                        "API failed after %d attempts. Last error: HTTP %d",
                         self.max_retries,
                         status_code,
                     )
@@ -322,33 +320,29 @@ class NewsSummarizer:
 
         raise last_exception  # type: ignore[misc]
 
-    def _call_gemini(self, system_instruction: str, user_prompt: str) -> str:
+    def _call_groq(self, system_instruction: str, user_prompt: str) -> str:
         """
-        Make a single Gemini generateContent API call via REST.
+        Make a single Groq chat completion API call via REST.
         """
-        url = _GEMINI_URL.format(model=self.model)
-        params = {"key": self.api_key}
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
 
         payload = {
-            "system_instruction": {
-                "parts": [{"text": system_instruction}]
-            },
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": user_prompt}],
-                }
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": user_prompt}
             ],
-            "generationConfig": {
-                "temperature": 0.3,
-                "maxOutputTokens": 4000,
-                "responseMimeType": "application/json",
-            },
+            "temperature": 0.3,
+            "max_tokens": 4000,
+            "response_format": {"type": "json_object"}
         }
 
         response = requests.post(
-            url,
-            params=params,
+            _GROQ_URL,
+            headers=headers,
             json=payload,
             timeout=90,
         )
@@ -356,7 +350,7 @@ class NewsSummarizer:
         if response.status_code != 200:
             error_detail = response.text[:500]
             logger.error(
-                "Gemini API error (HTTP %d): %s",
+                "Groq API error (HTTP %d): %s",
                 response.status_code,
                 error_detail,
             )
@@ -364,15 +358,15 @@ class NewsSummarizer:
 
         data = response.json()
 
-        # Extract text from Gemini response structure
+        # Extract text from Groq response structure
         try:
-            content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            content = data["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError) as exc:
-            logger.error("Unexpected Gemini response structure: %s", exc)
+            logger.error("Unexpected Groq response structure: %s", exc)
             logger.debug("Full response: %s", json.dumps(data)[:1000])
-            raise ValueError(f"Could not parse Gemini response: {exc}") from exc
+            raise ValueError(f"Could not parse Groq response: {exc}") from exc
 
-        logger.debug("Gemini response: %d chars", len(content))
+        logger.debug("Groq response: %d chars", len(content))
         return content
 
     # ── Private: Helpers ──────────────────────────────────────────────────
@@ -394,7 +388,7 @@ class NewsSummarizer:
         original_articles: list[dict[str, Any]],
     ) -> list[dict]:
         """
-        Parse the JSON array from the LLM response.
+        Parse the JSON from the LLM response.
         Falls back to original articles on parse failure.
         """
         cleaned = raw_response.strip()
@@ -404,7 +398,12 @@ class NewsSummarizer:
             cleaned = "\n".join(lines)
 
         try:
-            summaries = json.loads(cleaned)
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, dict) and "summaries" in parsed:
+                summaries = parsed["summaries"]
+            else:
+                summaries = parsed
+                
             if isinstance(summaries, list):
                 return summaries
         except json.JSONDecodeError as exc:
@@ -429,5 +428,6 @@ class NewsSummarizer:
                 "companies": article.get("companies", []),
                 "importance_score": article.get("importance_score", 0),
                 "link": article.get("link", ""),
+                "strategic_implication": "API failed. Review manually.",
             })
         return fallbacks

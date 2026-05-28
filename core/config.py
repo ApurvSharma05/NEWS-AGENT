@@ -24,8 +24,8 @@ DB_PATH = DATA_DIR / "news.db"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # ─── API Keys ─────────────────────────────────────────────────────────────────
-GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_IDS: list[str] = [
@@ -183,24 +183,24 @@ RSS_FEEDS: list[dict[str, str]] = [
 
 # ─── Application Settings ────────────────────────────────────────────────────
 MAX_ARTICLES_PER_FEED: int = int(os.getenv("MAX_ARTICLES_PER_FEED", "50"))
-DIGEST_MAX_ARTICLES: int = int(os.getenv("DIGEST_MAX_ARTICLES", "30"))
-BREAKING_NEWS_THRESHOLD: float = float(os.getenv("BREAKING_NEWS_THRESHOLD", "8.0"))
+DIGEST_MAX_ARTICLES: int = int(os.getenv("DIGEST_MAX_ARTICLES", "10"))
+BREAKING_NEWS_THRESHOLD: float = float(os.getenv("BREAKING_NEWS_THRESHOLD", "8.5"))
 SUMMARY_LANGUAGE: str = os.getenv("SUMMARY_LANGUAGE", "english")  # "english" or "hindi"
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-# ─── Gemini Rate Limiting ─────────────────────────────────────────────────────
+# ─── Groq Rate Limiting ─────────────────────────────────────────────────────
 # Tuned for the free tier (configured for 5 RPM to prevent rate limiting)
-GEMINI_BATCH_SIZE: int = int(os.getenv("GEMINI_BATCH_SIZE", "10"))
-GEMINI_RETRY_ATTEMPTS: int = int(os.getenv("GEMINI_RETRY_ATTEMPTS", "3"))
-GEMINI_RETRY_BASE_DELAY: float = float(os.getenv("GEMINI_RETRY_BASE_DELAY", "12.0"))
-GEMINI_COOLDOWN_DELAY: float = float(os.getenv("GEMINI_COOLDOWN_DELAY", "12.0"))
+GROQ_BATCH_SIZE: int = int(os.getenv("GROQ_BATCH_SIZE", "10"))
+GROQ_RETRY_ATTEMPTS: int = int(os.getenv("GROQ_RETRY_ATTEMPTS", "3"))
+GROQ_RETRY_BASE_DELAY: float = float(os.getenv("GROQ_RETRY_BASE_DELAY", "12.0"))
+GROQ_COOLDOWN_DELAY: float = float(os.getenv("GROQ_COOLDOWN_DELAY", "12.0"))
 
 # ─── Validation ───────────────────────────────────────────────────────────────
 def validate_config() -> list[str]:
     """Validate that all required configuration is present. Returns list of errors."""
     errors = []
-    if not GEMINI_API_KEY:
-        errors.append("GEMINI_API_KEY is not set. Get one free at https://aistudio.google.com/apikey")
+    if not GROQ_API_KEY:
+        errors.append("GROQ_API_KEY is not set. Get one free at https://console.groq.com/keys")
     if not TELEGRAM_BOT_TOKEN:
         errors.append("TELEGRAM_BOT_TOKEN is not set.")
     if not TELEGRAM_CHAT_IDS:

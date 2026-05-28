@@ -35,7 +35,7 @@ A production-ready Python agent that monitors tech/AI news daily, filters articl
 |---------|-------------|
 | 📰 **Multi-source RSS** | Fetches from TechCrunch, The Verge, Ars Technica, HN, and more |
 | 🎯 **Smart Filtering** | Fuzzy company matching with aliases (e.g., "ChatGPT" → OpenAI) |
-| 🧠 **LLM Summarization** | Concise, actionable summaries via Google Gemini API (free tier!) |
+| 🧠 **LLM Summarization** | Ultra-tight, highly critical strategic implications via Groq API |
 | 📊 **Importance Scoring** | Keyword-weighted ranking with breaking news detection |
 | 🔄 **Deduplication** | SQLite-backed, never sends the same article twice |
 | 📱 **Telegram Delivery** | Clean, formatted daily digest to your phone |
@@ -52,7 +52,7 @@ main.py                 → CLI entry point (digest / test / status)
        ├─ tools/fetch_rss.py       → RSS feed fetcher
        ├─ tools/filter_news.py     → Company filter + importance scorer
        ├─ tools/database.py        → SQLite dedup + storage
-       ├─ tools/summarize_news.py  → Gemini summarizer
+       ├─ tools/summarize_news.py  → Groq summarizer
        └─ tools/send_telegram.py   → Telegram delivery
   └─ core/config.py     → Centralized configuration
 ```
@@ -65,7 +65,7 @@ main.py                 → CLI entry point (digest / test / status)
 
 - **Python 3.11+** (tested on 3.11, 3.12, 3.13)
 - A **Telegram account**
-- A **Google Gemini API key** (free at [aistudio.google.com](https://aistudio.google.com/apikey))
+- A **Groq API key** (free at [console.groq.com/keys](https://console.groq.com/keys))
 
 ### 2. Clone & Install
 
@@ -86,14 +86,14 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Google Gemini API Setup
+### 3. Groq API Setup
 
-1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
-2. Sign in with your Google account
+1. Go to [console.groq.com/keys](https://console.groq.com/keys)
+2. Sign in or create an account
 3. Click **"Create API Key"**
 4. Copy the key
 
-> **💡 Cost:** The free tier gives you **15 requests/minute** and **1M tokens/minute** — more than enough for daily digests. Zero cost!
+> **💡 Cost:** Groq offers a generous free tier that is extremely fast—more than enough for daily digests. Zero cost!
 
 ### 4. Telegram Bot Setup
 
@@ -134,7 +134,7 @@ cp .env.example .env
 
 Fill in these **required** values:
 ```env
-GEMINI_API_KEY=your-gemini-api-key
+GROQ_API_KEY=your-groq-api-key
 TELEGRAM_BOT_TOKEN=123456789:ABCdef...
 TELEGRAM_CHAT_ID=your-chat-id
 ```
@@ -159,9 +159,9 @@ python main.py --status
 1. Fetches articles from 8+ RSS feeds
 2. Filters for mentions of tracked companies
 3. Removes articles you've already seen
-4. Scores articles by importance
-5. Sends top articles to Gemini for summarization
-6. Formats and delivers the digest to Telegram
+4. Scores articles by importance (highlights breaking news)
+5. Sends the top 10 most critical articles to Groq to extract strategic implications
+6. Formats and delivers a tight, scannable briefing to Telegram
 
 ---
 
@@ -242,7 +242,7 @@ crontab -e
        buildCommand: pip install -r requirements.txt
        startCommand: python main.py
        envVars:
-         - key: GEMINI_API_KEY
+         - key: GROQ_API_KEY
            sync: false
          - key: TELEGRAM_BOT_TOKEN
            sync: false
@@ -312,14 +312,14 @@ Swap `TelegramSender` for `SlackSender`, `DiscordSender`, or `EmailSender` — a
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | ✅ | — | Google Gemini API key (free) |
-| `GEMINI_MODEL` | ❌ | `gemini-2.0-flash` | Model for summarization |
+| `GROQ_API_KEY` | ✅ | — | Groq API key (free) |
+| `GROQ_MODEL` | ❌ | `llama-3.3-70b-versatile` | Model for summarization |
 | `TELEGRAM_BOT_TOKEN` | ✅ | — | Telegram bot token |
 | `TELEGRAM_CHAT_ID` | ✅ | — | Target chat/channel ID |
 | `TRACKED_COMPANIES` | ❌ | 6 defaults | Comma-separated company list |
 | `MAX_ARTICLES_PER_FEED` | ❌ | `50` | Max articles per RSS feed |
-| `DIGEST_MAX_ARTICLES` | ❌ | `30` | Max articles in digest |
-| `BREAKING_NEWS_THRESHOLD` | ❌ | `8.0` | Score threshold for 🔴 flag |
+| `DIGEST_MAX_ARTICLES` | ❌ | `10` | Max articles in digest |
+| `BREAKING_NEWS_THRESHOLD` | ❌ | `8.5` | Score threshold for 🔴 flag |
 | `SUMMARY_LANGUAGE` | ❌ | `english` | `english` or `hindi` |
 | `LOG_LEVEL` | ❌ | `INFO` | Logging verbosity |
 
