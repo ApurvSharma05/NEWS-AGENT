@@ -28,7 +28,9 @@ GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
 TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+TELEGRAM_CHAT_IDS: list[str] = [
+    cid.strip() for cid in os.getenv("TELEGRAM_CHAT_ID", "").split(",") if cid.strip()
+]
 
 # ─── Companies to Track ──────────────────────────────────────────────────────
 # Technip Energies NV competitors (EPC / Energy sector)
@@ -201,6 +203,6 @@ def validate_config() -> list[str]:
         errors.append("GEMINI_API_KEY is not set. Get one free at https://aistudio.google.com/apikey")
     if not TELEGRAM_BOT_TOKEN:
         errors.append("TELEGRAM_BOT_TOKEN is not set.")
-    if not TELEGRAM_CHAT_ID:
-        errors.append("TELEGRAM_CHAT_ID is not set.")
+    if not TELEGRAM_CHAT_IDS:
+        errors.append("TELEGRAM_CHAT_ID is not set (can be a comma-separated list).")
     return errors

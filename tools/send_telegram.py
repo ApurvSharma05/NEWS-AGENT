@@ -10,7 +10,7 @@ from typing import Any
 
 import requests
 
-from core.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+from core.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS
 
 logger = logging.getLogger(__name__)
 
@@ -23,18 +23,18 @@ class TelegramSender:
     Sends messages to Telegram using the Bot API.
 
     Supports Markdown formatting and automatic message splitting
-    for long digests.
+    for long digests. Broadcasts to all configured chat IDs.
     """
 
     def __init__(
         self,
         bot_token: str | None = None,
-        chat_id: str | None = None,
+        chat_ids: list[str] | None = None,
     ) -> None:
         self.bot_token = bot_token or TELEGRAM_BOT_TOKEN
-        self.chat_id = chat_id or TELEGRAM_CHAT_ID
+        self.chat_ids = chat_ids or TELEGRAM_CHAT_IDS
 
-        if not self.bot_token or not self.chat_id:
+        if not self.bot_token or not self.chat_ids:
             raise ValueError(
                 "TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set."
             )
@@ -46,9 +46,9 @@ class TelegramSender:
         text: str,
         parse_mode: str = "Markdown",
         disable_preview: bool = True,
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """
-        Send a text message to the configured Telegram chat.
+        Send a text message to all configured Telegram chats.
 
         Args:
             text: Message content (supports Markdown formatting).
@@ -56,67 +56,71 @@ class TelegramSender:
             disable_preview: Whether to disable link previews.
 
         Returns:
-            Telegram API response dict.
-
-        Raises:
-            requests.HTTPError: If the API call fails.
+            List of Telegram API response dicts.
         """
         url = f"{self.api_base}/sendMessage"
-        payload = {
-            "chat_id": self.chat_id,
-            "text": text,
-            "parse_mode": parse_mode,
-            "disable_web_page_preview": disable_preview,
-        }
+        results = []
+        for chat_id in self.chat_ids:
+            payload = {
+                "chat_id": chat_id,
+                "text": text,
+                "parse_mode": parse_mode,
+                "disable_web_page_preview": disable_preview,
+            }
 
-        try:
-            response = requests.post(url, json=payload, timeout=30)
-            response.raise_for_status()
-            result = response.json()
+            try:
+                response = requests.post(url, json=payload, timeout=30)
+                response.raise_for_status()
+                result = response.json()
 
-            if result.get("ok"):
-                logger.info(
-                    "Message sent to Telegram (chat_id=%s, length=%d)",
-                    self.chat_id,
-                    len(text),
+                if result.get("ok"):
+                    logger.info(
+                        "Message sent to Telegram (chat_id=%s, length=%d)",
+                        chat_id,
+                        len(text),
+                    )
+                else:
+                    logger.warning(
+                        "Telegram API returned ok=false for chat %s: %s",
+                        chat_id,
+                        result.get("description", "Unknown error"),
+                    )
+
+                results.append(result)
+
+            except requests.exceptions.RequestException as exc:
+                logger.error(
+                    "Failed to send Telegram message to %s: %s", chat_id, exc, exc_info=True
                 )
-            else:
-                logger.warning(
-                    "Telegram API returned ok=false: %s",
-                    result.get("description", "Unknown error"),
-                )
-
-            return result
-
-        except requests.exceptions.RequestException as exc:
-            logger.error(
-                "Failed to send Telegram message: %s", exc, exc_info=True
-            )
-            raise
+                
+        return results
 
     def send_photo(
         self,
         photo_url: str,
         caption: str = "",
-    ) -> dict[str, Any]:
+    ) -> list[dict[str, Any]]:
         """
-        Send a photo with optional caption. Useful for future chart/graph features.
+        Send a photo with optional caption to all configured chats.
         """
         url = f"{self.api_base}/sendPhoto"
-        payload = {
-            "chat_id": self.chat_id,
-            "photo": photo_url,
-            "caption": caption,
-            "parse_mode": "Markdown",
-        }
+        results = []
+        for chat_id in self.chat_ids:
+            payload = {
+                "chat_id": chat_id,
+                "photo": photo_url,
+                "caption": caption,
+                "parse_mode": "Markdown",
+            }
 
-        try:
-            response = requests.post(url, json=payload, timeout=30)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as exc:
-            logger.error("Failed to send photo: %s", exc)
-            raise
+            try:
+                response = requests.post(url, json=payload, timeout=30)
+                response.raise_for_status()
+                results.append(response.json())
+            except requests.exceptions.RequestException as exc:
+                logger.error("Failed to send photo to %s: %s", chat_id, exc)
+                
+        return results
 
     def verify_bot(self) -> bool:
         """
