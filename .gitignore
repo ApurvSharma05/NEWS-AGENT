@@ -1,15 +1,21 @@
 # Environment & secrets
 .env
+.env.local
+.env.*.local
+!.env.example
 venv/
 .venv/
 
-# Python
+# Python & Testing
 __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Database (auto-generated)
 data/news.db
@@ -17,7 +23,7 @@ data/news.db
 # Logs (auto-generated)
 *.log
 
-# IDE
+# IDE & Editor
 .vscode/
 .idea/
 *.swp

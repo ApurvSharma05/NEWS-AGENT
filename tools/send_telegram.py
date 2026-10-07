@@ -1,12 +1,12 @@
 """
 Telegram Delivery Tool.
 
-Sends formatted competitive intelligence briefings to Telegram chats/channels
-via the Bot API. Supports Markdown formatting, multi-chat broadcast, and
-automatic message splitting for Telegram's 4096-char limit.
+Sends formatted news briefings and alerts to configured Telegram channels/chats
+using the Telegram Bot API via REST requests, with retry logic and rate-limit handling.
 """
 
 import logging
+import time
 from typing import Any
 
 import requests
@@ -15,25 +15,30 @@ from core.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS
 
 logger = logging.getLogger(__name__)
 
-# Telegram Bot API base URL
+# Base URL for Telegram Bot API
 _TG_API_BASE = "https://api.telegram.org/bot{token}"
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
 class TelegramSender:
     """
-    Sends messages to Telegram using the Bot API.
+    Handles message delivery to Telegram channels/chats.
 
-    Supports Markdown formatting and automatic message splitting
-    for long digests. Broadcasts to all configured chat IDs.
+    Supports Markdown formatting, long message splitting (handled by caller),
+    retries on network/rate-limit errors, and multi-chat broadcast.
     """
 
     def __init__(
         self,
         bot_token: str | None = None,
         chat_ids: list[str] | None = None,
+        max_retries: int = 3,
+        base_delay: float = 2.0,
     ) -> None:
         self.bot_token = bot_token or TELEGRAM_BOT_TOKEN
         self.chat_ids = chat_ids or TELEGRAM_CHAT_IDS
+        self.max_retries = max_retries
+        self.base_delay = base_delay
 
         if not self.bot_token or not self.chat_ids:
             raise ValueError(
@@ -41,6 +46,66 @@ class TelegramSender:
             )
 
         self.api_base = _TG_API_BASE.format(token=self.bot_token)
+
+    def _post_with_retry(
+        self, endpoint: str, payload: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Post a request to the Telegram API with exponential backoff."""
+        url = f"{self.api_base}/{endpoint}"
+        last_exc: Exception | None = None
+
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                response = requests.post(url, json=payload, timeout=30)
+                if response.status_code == 200:
+                    return response.json()
+
+                if response.status_code in _RETRYABLE_STATUS_CODES:
+                    # Respect Telegram retry_after parameter if provided
+                    retry_after = self.base_delay * (2 ** (attempt - 1))
+                    try:
+                        err_json = response.json()
+                        if "parameters" in err_json and "retry_after" in err_json["parameters"]:
+                            retry_after = float(err_json["parameters"]["retry_after"])
+                    except Exception:
+                        pass
+
+                    logger.warning(
+                        "Telegram %s HTTP %d (attempt %d/%d). Retrying in %.1fs...",
+                        endpoint,
+                        response.status_code,
+                        attempt,
+                        self.max_retries,
+                        retry_after,
+                    )
+                    time.sleep(retry_after)
+                    continue
+
+                # Non-retryable HTTP error
+                response.raise_for_status()
+
+            except requests.exceptions.RequestException as exc:
+                last_exc = exc
+                if attempt < self.max_retries:
+                    delay = self.base_delay * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Telegram connection error on %s (attempt %d/%d): %s. Retrying in %.1fs...",
+                        endpoint,
+                        attempt,
+                        self.max_retries,
+                        exc,
+                        delay,
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(
+                        "Telegram %s failed after %d attempts: %s",
+                        endpoint,
+                        self.max_retries,
+                        exc,
+                    )
+
+        return None
 
     def send_message(
         self,
@@ -59,7 +124,6 @@ class TelegramSender:
         Returns:
             List of Telegram API response dicts.
         """
-        url = f"{self.api_base}/sendMessage"
         results = []
         for chat_id in self.chat_ids:
             payload = {
@@ -69,11 +133,8 @@ class TelegramSender:
                 "disable_web_page_preview": disable_preview,
             }
 
-            try:
-                response = requests.post(url, json=payload, timeout=30)
-                response.raise_for_status()
-                result = response.json()
-
+            result = self._post_with_retry("sendMessage", payload)
+            if result:
                 if result.get("ok"):
                     logger.info(
                         "Message sent to Telegram (chat_id=%s, length=%d)",
@@ -86,14 +147,10 @@ class TelegramSender:
                         chat_id,
                         result.get("description", "Unknown error"),
                     )
-
                 results.append(result)
+            else:
+                logger.error("Failed to deliver message to chat %s after retries.", chat_id)
 
-            except requests.exceptions.RequestException as exc:
-                logger.error(
-                    "Failed to send Telegram message to %s: %s", chat_id, exc, exc_info=True
-                )
-                
         return results
 
     def send_photo(
@@ -104,7 +161,6 @@ class TelegramSender:
         """
         Send a photo with optional caption to all configured chats.
         """
-        url = f"{self.api_base}/sendPhoto"
         results = []
         for chat_id in self.chat_ids:
             payload = {
@@ -114,29 +170,29 @@ class TelegramSender:
                 "parse_mode": "Markdown",
             }
 
-            try:
-                response = requests.post(url, json=payload, timeout=30)
-                response.raise_for_status()
-                results.append(response.json())
-            except requests.exceptions.RequestException as exc:
-                logger.error("Failed to send photo to %s: %s", chat_id, exc)
-                
+            result = self._post_with_retry("sendPhoto", payload)
+            if result:
+                results.append(result)
+
         return results
 
     def verify_bot(self) -> bool:
         """
-        Verify the bot token is valid by calling getMe.
+        Verify that the bot token is valid and can connect to Telegram.
         """
-        url = f"{self.api_base}/getMe"
         try:
+            url = f"{self.api_base}/getMe"
             response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            if data.get("ok"):
-                bot_name = data["result"].get("username", "unknown")
-                logger.info("Telegram bot verified: @%s", bot_name)
+            if response.status_code == 200 and response.json().get("ok"):
+                bot_info = response.json().get("result", {})
+                logger.info(
+                    "Telegram bot verified: @%s (%s)",
+                    bot_info.get("username", "?"),
+                    bot_info.get("first_name", "?"),
+                )
                 return True
+            logger.error("Failed to verify Telegram bot: %s", response.text)
             return False
         except requests.exceptions.RequestException as exc:
-            logger.error("Bot verification failed: %s", exc)
+            logger.error("Telegram verification request failed: %s", exc)
             return False

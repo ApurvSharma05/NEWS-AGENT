@@ -2,16 +2,18 @@
 Orchestrator agent for the EPC Competitor Intelligence pipeline.
 
 Coordinates the full daily digest workflow:
-  1. Fetch RSS articles from 24+ energy/EPC industry sources
-  2. Filter by 15 tracked competitors using fuzzy alias matching
+  1. Fetch RSS articles from energy/EPC industry sources
+  2. Filter by 15 tracked competitors using boundary-safe alias matching
   3. Deduplicate against SQLite history (never sends the same article twice)
   4. Score importance using 50+ weighted industry keywords
   5. Summarize top 10 articles with Groq LLM for strategic implications
   6. Format and deliver a tight, scannable briefing via Telegram
+  7. Persist processed articles to SQLite
 """
 
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from core.config import (
     TRACKED_COMPANIES,
@@ -57,9 +59,12 @@ class NewsAgent:
 
     # ── Public API ────────────────────────────────────────────────────────
 
-    def run_daily_digest(self) -> None:
+    def run_daily_digest(self) -> dict[str, Any]:
         """
         Execute the complete daily digest pipeline.
+
+        Returns:
+            Dictionary with execution statistics and telemetry.
         """
         logger.info("═" * 60)
         logger.info("Starting daily digest run at %s", datetime.now(timezone.utc).isoformat())
@@ -72,7 +77,13 @@ class NewsAgent:
         if not raw_articles:
             logger.warning("No articles fetched. Sending empty-digest notice.")
             self.sender.send_message("📭 *EPC Competitor Digest*\n\nNo articles found today.")
-            return
+            return {
+                "status": "empty_fetch",
+                "articles_fetched": 0,
+                "articles_filtered": 0,
+                "new_articles": 0,
+                "summaries_count": 0,
+            }
 
         # Step 2 — Filter by tracked companies
         filtered = self.filter.filter_articles(raw_articles)
@@ -83,7 +94,13 @@ class NewsAgent:
             self.sender.send_message(
                 "📭 *EPC Competitor Digest*\n\nNo relevant competitor news found today."
             )
-            return
+            return {
+                "status": "no_competitor_news",
+                "articles_fetched": len(raw_articles),
+                "articles_filtered": 0,
+                "new_articles": 0,
+                "summaries_count": 0,
+            }
 
         # Step 3 — Deduplicate
         new_articles = self.db.filter_new_articles(filtered)
@@ -91,7 +108,13 @@ class NewsAgent:
 
         if not new_articles:
             logger.info("All articles were duplicates. Nothing new to report.")
-            return
+            return {
+                "status": "all_duplicates",
+                "articles_fetched": len(raw_articles),
+                "articles_filtered": len(filtered),
+                "new_articles": 0,
+                "summaries_count": 0,
+            }
 
         # Step 4 — Score importance and sort
         scored = self.filter.score_articles(new_articles)
@@ -122,10 +145,23 @@ class NewsAgent:
             logger.info("Sent digest chunk %d/%d.", i, len(chunks))
 
         # Step 7 — Persist articles so they won't appear again
-        self.db.save_articles(top_articles)
-        logger.info("Saved %d articles to database.", len(top_articles))
+        saved_count = self.db.save_articles(top_articles)
+        logger.info("Saved %d articles to database.", saved_count)
 
         logger.info("Daily digest complete. ✅")
+
+        return {
+            "status": "success",
+            "articles_fetched": len(raw_articles),
+            "articles_filtered": len(filtered),
+            "new_articles": len(new_articles),
+            "digest_articles_count": len(top_articles),
+            "breaking_count": len(breaking),
+            "summaries_count": len(summaries),
+            "chunks_sent": len(chunks),
+            "articles_saved": saved_count,
+            "telemetry": self.summarizer.get_metrics(),
+        }
 
     # ── Private helpers ───────────────────────────────────────────────────
 
@@ -140,7 +176,7 @@ class NewsAgent:
         summaries_sorted = sorted(
             summaries, key=lambda a: a.get("importance_score", 0), reverse=True
         )
-        
+
         if not summaries_sorted:
             lines.append("\nNo high-priority updates.")
             return "\n".join(lines)
@@ -159,12 +195,12 @@ class NewsAgent:
             score = article.get("importance_score", 0)
 
             prefix = "🔴" if score >= BREAKING_NEWS_THRESHOLD else "⚡"
-            
+
             lines.append(f"\n{prefix} *{companies_str}*: {summary_text}")
-            
+
             if implication:
                 lines.append(f"💡 *Implication*: _{implication}_")
-                
+
             if link:
                 lines.append(f"🔗 [Source]({link})")
 

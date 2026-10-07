@@ -1,0 +1,32 @@
+{
+  "dataset_size": 100,
+  "true_positives": 50,
+  "false_positives": 0,
+  "false_negatives": 0,
+  "true_negatives": 50,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1_score": 1.0,
+  "accuracy": 1.0,
+  "specificity": 1.0,
+  "entity_detection_accuracy": 1.0,
+  "latency_ms_per_article": 0.047,
+  "throughput_articles_per_sec": 21413.3,
+  "company_recall": {
+    "Saipem": 1.0,
+    "Fluor": 1.0,
+    "JGC Holdings": 1.0,
+    "Bechtel": 1.0,
+    "Worley": 1.0,
+    "Petrofac": 1.0,
+    "McDermott": 1.0,
+    "Wood Group": 1.0,
+    "MAIRE": 1.0,
+    "Larsen & Toubro": 1.0,
+    "Samsung E&A": 1.0,
+    "AECOM": 1.0,
+    "Baker Hughes": 1.0,
+    "Linde": 1.0,
+    "AtkinsRealis": 1.0
+  }
+}

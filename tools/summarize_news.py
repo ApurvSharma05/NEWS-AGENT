@@ -10,6 +10,7 @@ Production-grade features:
   - Inter-batch cooldown to respect RPM limits
   - Summary caching via SQLite to avoid redundant API calls
   - Graceful fallback to raw summaries on persistent failure
+  - Token and API usage telemetry / observability
 """
 
 import json
@@ -49,6 +50,7 @@ class NewsSummarizer:
       - Smart batching to stay under token limits
       - SQLite-based summary caching to avoid redundant API calls
       - Fallback to raw summaries on persistent failure
+      - Usage telemetry (prompt/completion token counters)
     """
 
     def __init__(
@@ -61,11 +63,27 @@ class NewsSummarizer:
         self.max_retries = GROQ_RETRY_ATTEMPTS
         self.base_delay = GROQ_RETRY_BASE_DELAY
 
+        # Telemetry for token and cost observability
+        self.metrics: dict[str, int] = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "api_calls": 0,
+        }
+
         if not self.api_key:
             raise ValueError(
                 "Groq API key is required for summarization. "
                 "Get one at https://console.groq.com/keys"
             )
+
+    def get_metrics(self) -> dict[str, Any]:
+        """Return cumulative token usage and call metrics."""
+        return {
+            **self.metrics,
+            "model": self.model,
+            "estimated_cost_usd": 0.0,  # Free tier on Groq
+        }
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -253,9 +271,9 @@ class NewsSummarizer:
 
         Retry strategy:
           - Attempt 1: immediate
-          - Attempt 2: wait base_delay * 1   (5s)
-          - Attempt 3: wait base_delay * 3   (15s)
-          - Attempt 4: wait base_delay * 9   (45s)
+          - Attempt 2: wait base_delay * 1   (12s)
+          - Attempt 3: wait base_delay * 3   (36s)
+          - Attempt 4: wait base_delay * 9   (108s)
 
         Only retries on 429, 500, 502, 503 status codes.
         """
@@ -358,6 +376,23 @@ class NewsSummarizer:
 
         data = response.json()
 
+        # Telemetry instrumentation
+        usage = data.get("usage", {})
+        if usage:
+            prompt_toks = usage.get("prompt_tokens", 0)
+            comp_toks = usage.get("completion_tokens", 0)
+            total_toks = usage.get("total_tokens", prompt_toks + comp_toks)
+            self.metrics["prompt_tokens"] += prompt_toks
+            self.metrics["completion_tokens"] += comp_toks
+            self.metrics["total_tokens"] += total_toks
+            self.metrics["api_calls"] += 1
+            logger.info(
+                "Groq telemetry: %d prompt tokens, %d completion tokens (Total: %d)",
+                prompt_toks,
+                comp_toks,
+                self.metrics["total_tokens"],
+            )
+
         # Extract text from Groq response structure
         try:
             content = data["choices"][0]["message"]["content"].strip()
@@ -403,7 +438,7 @@ class NewsSummarizer:
                 summaries = parsed["summaries"]
             else:
                 summaries = parsed
-                
+
             if isinstance(summaries, list):
                 return summaries
         except json.JSONDecodeError as exc:

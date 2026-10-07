@@ -1,0 +1,809 @@
+[
+  {
+    "title": "Saipem awarded offshore EPCI contract by QatarEnergy LNG",
+    "summary": "Saipem has received a major contract for offshore facilities in Qatar.",
+    "expected_companies": [
+      "Saipem"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "SAI.MI shares rise 4% following multi-billion subsea award",
+    "summary": "Italian contractor saipem spa announced a new subsea pipeline package.",
+    "expected_companies": [
+      "Saipem"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "TotalEnergies signs agreement with Saipem for Mozambique LNG",
+    "summary": "Reactivation of the Mozambique LNG export project involving Saipem.",
+    "expected_companies": [
+      "Saipem"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Fluor Corporation reports Q1 earnings and backlog expansion",
+    "summary": "Fluor Corp announced solid progress on clean energy and energy transition projects.",
+    "expected_companies": [
+      "Fluor"
+    ],
+    "relevant": 1,
+    "importance": 3
+  },
+  {
+    "title": "FLR wins engineering and procurement package for Gulf Coast refinery",
+    "summary": "Fluor secures $500M contract for petrochemical modernization.",
+    "expected_companies": [
+      "Fluor"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Fluor-JGC JV Awarded FEED Contract for LNG Canada Expansion",
+    "summary": "The joint venture between JGC Holdings and Fluor Corporation was selected for Phase 2.",
+    "expected_companies": [
+      "Fluor",
+      "JGC Holdings"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Bechtel begins construction on Port Arthur LNG Phase 1",
+    "summary": "Bechtel Group is executing the EPC contract for Sempra Infrastructure.",
+    "expected_companies": [
+      "Bechtel"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Rio Grande LNG reaches FID, Bechtel issued full notice to proceed",
+    "summary": "NextDecade approves FID on Train 4 with Bechtel as lead EPC contractor.",
+    "expected_companies": [
+      "Bechtel"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Bechtel Corporation appointed for nuclear power plant expansion",
+    "summary": "Civil engineering giant Bechtel secures major energy infrastructure tender.",
+    "expected_companies": [
+      "Bechtel"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Worley selected for green hydrogen and ammonia project in Oman",
+    "summary": "Worley Limited will provide early front-end engineering design (FEED).",
+    "expected_companies": [
+      "Worley"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "WorleyParsons heritage business secures global framework with bp",
+    "summary": "Engineering services provider Worley awarded maintenance contract.",
+    "expected_companies": [
+      "Worley"
+    ],
+    "relevant": 1,
+    "importance": 3
+  },
+  {
+    "title": "WOR.AX climbs as energy transition backlog hits record high",
+    "summary": "Worley reports strong client demand for carbon capture and decarbonization engineering.",
+    "expected_companies": [
+      "Worley"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Petrofac secures $600M EPC contract in North Africa",
+    "summary": "Petrofac Limited wins gas processing facility tender from Sonatrach.",
+    "expected_companies": [
+      "Petrofac"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Petrofac Ltd enters restructuring talks with key lenders",
+    "summary": "Financial difficulties prompt debt refinancing negotiations for Petrofac.",
+    "expected_companies": [
+      "Petrofac"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "ADNOC Gas awards EPC contract to Petrofac for Habshan complex",
+    "summary": "New gas compression units to be built by Petrofac.",
+    "expected_companies": [
+      "Petrofac"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "McDermott awarded offshore EPCI contract in Middle East",
+    "summary": "McDermott International will fabricate and install offshore platforms for Aramco.",
+    "expected_companies": [
+      "McDermott"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "CB&I storage tanks selected for massive US ammonia terminal",
+    "summary": "McDermott storage business CB&I secures cryogenic tank contract.",
+    "expected_companies": [
+      "McDermott"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Lummus technology licensing agreement finalized with McDermott",
+    "summary": "Downstream refinery upgrade will incorporate Lummus catalytic cracking unit.",
+    "expected_companies": [
+      "McDermott"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Wood wins multi-million decarbonization contract with Chevron",
+    "summary": "John Wood Group will engineer carbon reduction systems for offshore platforms.",
+    "expected_companies": [
+      "Wood Group"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Wood plc receives takeover approach from Sidara",
+    "summary": "Board of John Wood evaluates unsolicited buyout offer.",
+    "expected_companies": [
+      "Wood Group"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Wood Group selected for brownfield modifications in UK North Sea",
+    "summary": "Engineering consultancy Wood provides asset integrity management.",
+    "expected_companies": [
+      "Wood Group"
+    ],
+    "relevant": 1,
+    "importance": 3
+  },
+  {
+    "title": "Tecnimont S.P.A. Awarded $1.3 Billion EPC Contract For Petrochemical Project",
+    "summary": "MAIRE subsidiary Tecnimont to construct low-density polyethylene plant.",
+    "expected_companies": [
+      "MAIRE"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "MAIRE announces NextChem sustainable aviation fuel license in Europe",
+    "summary": "Maire Tecnimont technology branch NextChem expands renewable fuels portfolio.",
+    "expected_companies": [
+      "MAIRE"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Maire SpA reports 35% surge in order intake driven by energy transition",
+    "summary": "Italian engineering group MAIRE delivers robust quarterly results.",
+    "expected_companies": [
+      "MAIRE"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "JGC Corporation wins FLNG engineering study for Southeast Asia",
+    "summary": "Japanese EPC leader JGC selected for floating liquefied natural gas design.",
+    "expected_companies": [
+      "JGC Holdings"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Chiyoda and JGC form consortium for green ammonia export facility",
+    "summary": "JGC Holdings partners to build industrial ammonia plant.",
+    "expected_companies": [
+      "JGC Holdings"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "JGC Corp selected for sustainable aviation fuel facility FEED",
+    "summary": "Biofuel manufacturing facility in Japan awards engineering contract to JGC.",
+    "expected_companies": [
+      "JGC Holdings"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Larsen & Toubro hydrocarbon business wins ultra-mega order in Saudi Arabia",
+    "summary": "L&T Energy Hydrocarbon bags multi-billion gas compression package.",
+    "expected_companies": [
+      "Larsen & Toubro"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "L&T awarded major electrification and transmission contract in Middle East",
+    "summary": "Larsen and Toubro infrastructure division expands regional footprint.",
+    "expected_companies": [
+      "Larsen & Toubro"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "L&T Hydrocarbon delivers deepwater subsea manifold for ONGC",
+    "summary": "Domestic EPC giant Larsen & Toubro achieves critical offshore milestone.",
+    "expected_companies": [
+      "Larsen & Toubro"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Samsung E&A bags $6 billion Fadhili gas increment contract",
+    "summary": "Samsung Engineering secures landmark EPC package from Aramco.",
+    "expected_companies": [
+      "Samsung E&A"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Samsung Engineering changes name to Samsung E&A to signal future growth",
+    "summary": "Korean contractor rebrands to Samsung E&A highlighting energy transition.",
+    "expected_companies": [
+      "Samsung E&A"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "KT-Kinetics and Samsung Eng form alliance for blue ammonia plant",
+    "summary": "Partnership aims to capture Asian hydrogen market share.",
+    "expected_companies": [
+      "Samsung E&A"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "AECOM selected for environmental permitting on major offshore wind farm",
+    "summary": "Infrastructure firm AECOM to deliver environmental impact assessments.",
+    "expected_companies": [
+      "AECOM"
+    ],
+    "relevant": 1,
+    "importance": 3
+  },
+  {
+    "title": "ACM reports 12% revenue growth on government civil infrastructure boom",
+    "summary": "AECOM technology and consulting services show strong backlog.",
+    "expected_companies": [
+      "AECOM"
+    ],
+    "relevant": 1,
+    "importance": 3
+  },
+  {
+    "title": "AECOM engineering services contracted for port terminal expansion",
+    "summary": "Maritime infrastructure project awards lead design to AECOM.",
+    "expected_companies": [
+      "AECOM"
+    ],
+    "relevant": 1,
+    "importance": 3
+  },
+  {
+    "title": "Baker Hughes secures turbomachinery equipment order for LNG project",
+    "summary": "Baker Hughes Co will supply electric-driven compression trains.",
+    "expected_companies": [
+      "Baker Hughes"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "BKR wins multi-million carbon capture equipment deal",
+    "summary": "Baker Hughes expands industrial decarbonization solutions.",
+    "expected_companies": [
+      "Baker Hughes"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Baker Hughes awarded subsea tree package for offshore Brazil",
+    "summary": "Petrobras contracts Baker Hughes for deepwater pre-salt fields.",
+    "expected_companies": [
+      "Baker Hughes"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Linde Engineering builds world-scale hydrogen electrolysis plant in Europe",
+    "summary": "Industrial gas leader Linde plc starts construction on 24MW electrolyzer.",
+    "expected_companies": [
+      "Linde"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Linde wins air separation unit EPC contract for steel manufacturer",
+    "summary": "Linde Group supplies cryogenic technology to decarbonize industrial facility.",
+    "expected_companies": [
+      "Linde"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "LIN stock hits 52-week high after long-term supply agreement",
+    "summary": "Linde will invest over $1.8 billion to supply clean hydrogen to Dow.",
+    "expected_companies": [
+      "Linde"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "AtkinsRealis selected for engineering consultancy on nuclear power plant",
+    "summary": "Atkins Realis will deliver reactor engineering services in North America.",
+    "expected_companies": [
+      "AtkinsRealis"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "SNC-Lavalin legacy projects settled as AtkinsRealis pivots to green services",
+    "summary": "Former SNC Lavalin reports strong net income under new brand identity.",
+    "expected_companies": [
+      "AtkinsRealis"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Faithful+Gould project management team rebranded under AtkinsRealis",
+    "summary": "Cost consulting arm fully integrated into AtkinsRealis operations.",
+    "expected_companies": [
+      "AtkinsRealis"
+    ],
+    "relevant": 1,
+    "importance": 3
+  },
+  {
+    "title": "Fluor and Technip Energies rival Saipem enter tender for Mediterranean pipeline",
+    "summary": "Saipem and Fluor compete for high-value gas interconnector tender.",
+    "expected_companies": [
+      "Saipem",
+      "Fluor"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Bechtel, McDermott, and Worley submit proposals for Australian ammonia hub",
+    "summary": "Three major international contractors bid for green energy EPC.",
+    "expected_companies": [
+      "Bechtel",
+      "McDermott",
+      "Worley"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Petrofac and L&T lead shortlist for Aramco unconventional gas expansion",
+    "summary": "Larsen & Toubro and Petrofac positioned for EPC awards.",
+    "expected_companies": [
+      "Petrofac",
+      "Larsen & Toubro"
+    ],
+    "relevant": 1,
+    "importance": 5
+  },
+  {
+    "title": "Baker Hughes and Linde partner on integrated CCUS solutions",
+    "summary": "Collaboration targets carbon capture, compression, and liquefaction.",
+    "expected_companies": [
+      "Baker Hughes",
+      "Linde"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "MAIRE and Samsung E&A team up on European fertilizer complex",
+    "summary": "Tecnimont and Samsung Engineering form consortium.",
+    "expected_companies": [
+      "MAIRE",
+      "Samsung E&A"
+    ],
+    "relevant": 1,
+    "importance": 4
+  },
+  {
+    "title": "Hollywood box office breaks summer attendance records",
+    "summary": "Blockbuster releases bring millions of moviegoers to theaters.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Wildfire threatens California woodland and national park",
+    "summary": "Firefighters battle blazes across dense timber and hardwood forests.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Driftwood art exhibition opens in coastal gallery",
+    "summary": "Sculptors showcase ocean driftwood craftsmanship.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Online banking platform experiences brief maintenance outage",
+    "summary": "Digital customers were unable to access accounts for two hours.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Airline passenger traffic rebounds to pre-pandemic highs",
+    "summary": "Global airlines report increased load factor and jet fuel consumption.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "EPA issues new guideline for municipal drinking water safety",
+    "summary": "Regulatory guidelines require water treatment plants to test for PFAS.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Lincoln Electric reports quarterly welding equipment sales",
+    "summary": "Industrial manufacturer Lincoln Electric saw stable automation demand.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Semiconductor manufacturer inaugurates new fabrication line in Ohio",
+    "summary": "Advanced microchip facility receives federal CHIPS Act grant.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "ExxonMobil discovers oil in offshore Guyana Stabroek block",
+    "summary": "Supermajor adds estimated 100 million barrels of recoverable oil.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "Shell reports Q2 profits of $6.3 billion amid oil price volatility",
+    "summary": "Integrated gas and upstream earnings buoy European oil major.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "BP accelerates deepwater exploration in Gulf of Mexico",
+    "summary": "Tiber and Gila discoveries move toward potential sanction.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "Chevron expands Permian Basin tight oil drilling operations",
+    "summary": "Shale output increases across Texas and New Mexico acreage.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "Equinor awards Johan Castberg maintenance contract to local yard",
+    "summary": "Norwegian state-backed operator ensures FPSO startup on schedule.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "TotalEnergies powers forward with Suriname offshore development",
+    "summary": "GranMorgu field development expected to reach FID later this year.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "OPEC+ ministers agree to gradual phaseout of voluntary crude cuts",
+    "summary": "Alliance to restore barrels depending on market balance.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "Henry Hub natural gas futures drop 5% on mild winter weather forecast",
+    "summary": "Storage levels remain well above five-year average.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Brent crude stabilizes near $80 per barrel following geopolitical concerns",
+    "summary": "Tanker traffic through Bab el-Mandeb strait remains constrained.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "US Treasury yields climb as inflation prints above expectations",
+    "summary": "Federal Reserve expected to keep benchmark interest rate steady.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Tesla launches new commercial energy storage Megapack project",
+    "summary": "Grid-scale battery system commissioned in California.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Solar panel tariffs reinstated on imports from Southeast Asia",
+    "summary": "Commerce department determines circumvention occurred.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Wind turbine blade recycling facility opens in Iowa",
+    "summary": "Composite materials converted into thermoplastic construction pellets.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Lithium carbonate prices rebound amid battery manufacturer restocking",
+    "summary": "Electric vehicle demand supports mining spot market prices.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "European gas storage facilities reach 90% capacity ahead of target",
+    "summary": "Robust LNG imports keep regional storage comfortably filled.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Panama Canal increases daily transit slots as rainfall eases drought",
+    "summary": "Container and dry bulk vessels resume normal draft depths.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Steel imports to European Union decline following carbon border levy",
+    "summary": "CBAM regulations take initial effect on metallurgical products.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Local utility seeks regulatory approval for power grid upgrade",
+    "summary": "Ratepayers may see modest increase in monthly billing.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Municipal wastewater treatment facility upgrades biological reactors",
+    "summary": "City infrastructure bond finances aerator modernization.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Commercial real estate prices soften in downtown metropolitan areas",
+    "summary": "Office vacancies remain elevated as hybrid work persists.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "AI startup secures $50M Series B for enterprise search assistant",
+    "summary": "Venture capital continues to flow into generative AI applications.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Agricultural harvest yields affected by persistent regional dry spell",
+    "summary": "Soybean and corn futures react to midwestern soil moisture reports.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "National cybersecurity agency warns of industrial control vulnerability",
+    "summary": "Operators urged to patch SCADA communication gateways.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "Copper spot prices rally toward record high on supply disruptions",
+    "summary": "Smelter capacity restrictions and mine halts drive tightness.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Major highway bridge expansion completed three months ahead of schedule",
+    "summary": "State Department of Transportation opens new transit lanes.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Hydroelectric dam achieves peak power output following spring runoff",
+    "summary": "Reservoir management balances downstream irrigation requirements.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Geothermal energy exploratory drilling begins in Nevada basin",
+    "summary": "Clean power initiative tests enhanced geothermal systems.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Commercial aviation sector reviews sustainable fuel mandate compliance",
+    "summary": "European ReFuelEU targets require increasing blend percentages.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "Container shipping freight rates spike on Red Sea diversion routes",
+    "summary": "Carriers route vessels around Cape of Good Hope.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 2
+  },
+  {
+    "title": "Chemical distributor opens bulk liquid storage terminal on Mississippi",
+    "summary": "Barge transfer operations expanded for industrial acids.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Undersea fiber optic communications cable lands in Portugal",
+    "summary": "Transatlantic data corridor connects Latin America and Europe.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Electric vehicle charging network adds 500 ultra-fast charging stalls",
+    "summary": "High-power DC charging stations installed along interstate corridors.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Automotive supplier introduces lightweight composite battery enclosures",
+    "summary": "Design improves thermal management and vehicle driving range.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Modular data center provider expands campus footprint in Virginia",
+    "summary": "Power availability drives expansion in key internet exchange hubs.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Gold mining company reports operational results from West Africa assets",
+    "summary": "All-in sustaining costs remain controlled amid gold bullion highs.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Pulp and paper mill converts boilers to biomass fuel source",
+    "summary": "Facility reduces fossil gas consumption using wood chips byproduct.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Port of Rotterdam tests automated mooring system for container ships",
+    "summary": "Vacuum-based mooring technology shortens berthing turnaround times.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Railway freight operator orders 100 high-efficiency diesel locomotives",
+    "summary": "Tier 4 compliant engines reduce fuel burn across long-haul freight.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Aerospace contractor conducts static fire test for rocket booster",
+    "summary": "Commercial satellite launch vehicle prepares for orbital demo.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Severe thunder storm grounds regional flights and downs power lines",
+    "summary": "Emergency utility crews work to restore suburban electricity.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Municipal transit authority awards commuter rail maintenance contract",
+    "summary": "Rolling stock upkeep renewed under five-year operating agreement.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  },
+  {
+    "title": "Global pharmaceutical company announces Phase 3 trial results for oncology drug",
+    "summary": "Clinical endpoint achieved in international patient cohort.",
+    "expected_companies": [],
+    "relevant": 0,
+    "importance": 1
+  }
+]

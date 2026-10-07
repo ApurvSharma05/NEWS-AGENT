@@ -81,6 +81,7 @@ class NewsDatabase:
     ) -> list[dict[str, Any]]:
         """
         Return only articles whose links are NOT already in the database.
+        Uses batched 'WHERE link IN (...)' queries to avoid N+1 query bottlenecks.
 
         Args:
             articles: List of article dicts (must have 'link' key).
@@ -91,33 +92,43 @@ class NewsDatabase:
         if not articles:
             return []
 
-        new_articles: list[dict[str, Any]] = []
+        links = [a.get("link", "") for a in articles if a.get("link")]
+        if not links:
+            return articles
+
+        existing_links: set[str] = set()
         try:
             with self._connect() as conn:
-                for article in articles:
-                    link = article.get("link", "")
-                    if not link:
-                        continue
-                    row = conn.execute(
-                        "SELECT 1 FROM articles WHERE link = ?", (link,)
-                    ).fetchone()
-                    if row is None:
-                        new_articles.append(article)
+                batch_size = 500
+                for i in range(0, len(links), batch_size):
+                    batch = links[i : i + batch_size]
+                    placeholders = ",".join("?" for _ in batch)
+                    rows = conn.execute(
+                        f"SELECT link FROM articles WHERE link IN ({placeholders})",
+                        batch,
+                    ).fetchall()
+                    existing_links.update(row["link"] for row in rows)
+
+            new_articles = [
+                a for a in articles if a.get("link") and a.get("link") not in existing_links
+            ]
         except sqlite3.Error as exc:
             logger.error("Dedup query failed: %s", exc)
             # On error, return all articles to avoid data loss
             return articles
 
         logger.info(
-            "Dedup: %d total → %d new articles.",
+            "Dedup: %d total → %d new articles (%d already seen).",
             len(articles),
             len(new_articles),
+            len(existing_links),
         )
         return new_articles
 
     def save_articles(self, articles: list[dict[str, Any]]) -> int:
         """
         Insert articles into the database. Skips duplicates silently.
+        Accurately counts newly inserted rows using cursor rowcount.
 
         Args:
             articles: List of article dicts.
@@ -132,7 +143,7 @@ class NewsDatabase:
             with self._connect() as conn:
                 for article in articles:
                     try:
-                        conn.execute(
+                        cursor = conn.execute(
                             """
                             INSERT OR IGNORE INTO articles
                                 (title, link, source, published, summary, companies, importance, created_at)
@@ -149,7 +160,7 @@ class NewsDatabase:
                                 now,
                             ),
                         )
-                        if conn.total_changes:
+                        if cursor.rowcount > 0:
                             inserted += 1
                     except sqlite3.IntegrityError:
                         # Duplicate link — skip
@@ -166,25 +177,61 @@ class NewsDatabase:
     ) -> list[dict[str, Any]]:
         """
         Retrieve the most recent articles from the database.
-
-        Useful for debugging or building a web dashboard later.
         """
+        return self.get_articles(limit=limit)
+
+    def get_articles(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        company: str | None = None,
+        min_importance: float | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieve articles with optional filtering and pagination.
+
+        Args:
+            limit: Maximum articles to return.
+            offset: Pagination offset.
+            company: Optional company name substring filter.
+            min_importance: Minimum importance score threshold.
+
+        Returns:
+            List of article dicts.
+        """
+        query = "SELECT * FROM articles WHERE 1=1"
+        params: list[Any] = []
+
+        if company:
+            query += " AND companies LIKE ?"
+            params.append(f"%{company}%")
+
+        if min_importance is not None:
+            query += " AND importance >= ?"
+            params.append(min_importance)
+
+        query += " ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
         try:
             with self._connect() as conn:
-                rows = conn.execute(
-                    "SELECT * FROM articles ORDER BY created_at DESC LIMIT ?",
-                    (limit,),
-                ).fetchall()
+                rows = conn.execute(query, params).fetchall()
                 return [dict(row) for row in rows]
         except sqlite3.Error as exc:
             logger.error("Failed to retrieve articles: %s", exc)
             return []
 
-    def count_articles(self) -> int:
-        """Return total number of stored articles."""
+    def count_articles(self, company: str | None = None) -> int:
+        """Return total number of stored articles, optionally filtered by company."""
+        query = "SELECT COUNT(*) as cnt FROM articles"
+        params: list[Any] = []
+        if company:
+            query += " WHERE companies LIKE ?"
+            params.append(f"%{company}%")
+
         try:
             with self._connect() as conn:
-                row = conn.execute("SELECT COUNT(*) as cnt FROM articles").fetchone()
+                row = conn.execute(query, params).fetchone()
                 return row["cnt"] if row else 0
         except sqlite3.Error as exc:
             logger.error("Failed to count articles: %s", exc)
@@ -197,6 +244,7 @@ class NewsDatabase:
     ) -> dict[str, dict]:
         """
         Look up previously cached LLM summaries by article link.
+        Uses batched IN queries for high throughput.
 
         Args:
             links: List of article URLs to check.
@@ -204,22 +252,24 @@ class NewsDatabase:
         Returns:
             Dict mapping link -> summary dict for articles found in cache.
         """
-        if not links:
+        valid_links = [l for l in links if l]
+        if not valid_links:
             return {}
 
         cached: dict[str, dict] = {}
         try:
             with self._connect() as conn:
-                for link in links:
-                    if not link:
-                        continue
-                    row = conn.execute(
-                        "SELECT summary_json FROM summary_cache WHERE link = ?",
-                        (link,),
-                    ).fetchone()
-                    if row:
+                batch_size = 500
+                for i in range(0, len(valid_links), batch_size):
+                    batch = valid_links[i : i + batch_size]
+                    placeholders = ",".join("?" for _ in batch)
+                    rows = conn.execute(
+                        f"SELECT link, summary_json FROM summary_cache WHERE link IN ({placeholders})",
+                        batch,
+                    ).fetchall()
+                    for row in rows:
                         try:
-                            cached[link] = json.loads(row["summary_json"])
+                            cached[row["link"]] = json.loads(row["summary_json"])
                         except json.JSONDecodeError:
                             pass  # Corrupted cache entry — skip
         except sqlite3.Error as exc:

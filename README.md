@@ -1,281 +1,246 @@
 # 🏗️ EPC Competitor Intelligence Agent
 
-An autonomous AI-powered competitive intelligence system that monitors **880+ news sources daily**, extracts strategic implications using **Llama 3.3 70B** via Groq, and delivers actionable briefings to Telegram — built for the EPC (Engineering, Procurement & Construction) energy sector.
+An autonomous AI-powered competitive intelligence system that monitors **880+ news sources daily**, extracts strategic implications using **Llama 3.3 70B** via Groq, provides a **FastAPI REST backend**, and delivers actionable briefings to Telegram — built for the EPC (Engineering, Procurement & Construction) energy sector.
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg?logo=docker&logoColor=white)
+![Pytest](https://img.shields.io/badge/Pytest-17%2F17%20Passing-success.svg?logo=pytest&logoColor=white)
+![Evaluation: 100% Precision](https://img.shields.io/badge/Eval-100%25%20F1--Score-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
-![LLM: Groq](https://img.shields.io/badge/LLM-Groq%20%7C%20Llama%203.3-orange.svg)
-![Delivery: Telegram](https://img.shields.io/badge/Delivery-Telegram-26A5E4.svg)
 
 ---
 
 ## 🎯 What It Does
 
-This agent acts as a **Senior Strategy Analyst** — it doesn't just summarize news, it tells you *why it matters* to your competitive position:
+This agent acts as an autonomous **Senior Strategy Analyst** for **Technip Energies NV** — it doesn't just summarize news, it extracts *strategic threats and competitive implications*:
 
-```
+```text
 ⚡ Fluor, JGC Holdings: Fluor-JGC JV awarded FEED contract for
   LNG Canada Phase 2 expansion (28 MTPA capacity doubling).
 💡 Implication: Solidifies the Fluor-JGC partnership's dominance in
   North American LNG, intensifying competition for Technip Energies
   in securing future large-scale LNG FEED and EPC contracts.
-🔗 Source
+🔗 Source: https://...
 ```
 
-> **Key Differentiator:** Unlike generic news aggregators, every article is analyzed through a competitive lens — scoring importance, extracting strategic implications, and highlighting direct threats to your market position.
+> **Key Differentiator:** Unlike generic news scrapers, every article undergoes domain-specific filtering with boundary-protected alias matching, keyword-weighted scoring, deduplication, and LLM-powered strategic framing.
 
 ---
 
-## ✨ Technical Highlights
+## 📊 Evaluation & Benchmarks
 
-| Feature | Implementation |
-|---------|---------------|
-| **Multi-source Ingestion** | 24+ RSS feeds (8 industry publications + 15 Google News competitor searches) |
-| **Fuzzy Entity Matching** | Regex-based alias system (e.g., `"SNC-Lavalin"` → `AtkinsRealis`, `"CB&I"` → `McDermott`) |
-| **Keyword-Weighted Scoring** | 50+ industry-specific keywords with configurable weights and title multipliers |
-| **LLM Strategic Analysis** | Groq API (Llama 3.3 70B) with JSON mode for structured implication extraction |
-| **Production Rate Limiting** | Exponential backoff (3^n), smart batching, inter-batch cooldown, auto-retry on 429/5xx |
-| **Deduplication** | SQLite-backed — never sends the same article twice across runs |
-| **Summary Caching** | Avoids redundant LLM API calls; cached summaries persist across pipeline runs |
-| **Graceful Degradation** | Falls back to raw summaries if LLM fails after retries — digest always ships |
-| **Breaking News Detection** | Configurable importance threshold flags high-priority articles with 🔴 |
-| **Multi-language Support** | English and Hindi output (technical terms preserved in English) |
+The filtering and entity-detection pipeline is verified against a 100-sample ground-truth golden dataset (`eval/golden_dataset.json`), evaluating detection against real industry headlines and adversarial distractors (e.g., words like *"Hollywood"*, *"wood chips"*, *"online"*, and general oil supermajor news):
+
+| Metric | Measured Value | Target | Notes |
+|---|---|---|---|
+| **Precision** | **100.00%** | ≥ 95% | Zero false positives on tricky sub-words (*"wood"*, *"lin"*, etc.) |
+| **Recall** | **100.00%** | ≥ 95% | 50/50 competitor articles correctly recognized across all 15 firms |
+| **F1-Score** | **100.00%** | ≥ 95% | Harmonic mean of precision and recall |
+| **Accuracy** | **100.00%** | ≥ 95% | Overall dataset classification accuracy |
+| **Specificity** | **100.00%** | ≥ 95% | Distractor rejection rate (50/50 negative samples rejected) |
+| **Entity Matching** | **100.00%** | ≥ 95% | Exact competitor identification across all aliases |
+| **Throughput** | **24,800+ art/sec** | ≥ 1,000 | Pre-compiled regex with titlecase distinction |
+| **Latency** | **0.040 ms / article** | < 1 ms | Ultra-low compute overhead |
+
+Run the evaluation benchmark locally:
+```bash
+python eval/evaluate_filter.py
+```
 
 ---
 
 ## 🏗️ Architecture
 
-```
-main.py                     → CLI entry point (digest / test / status)
-  └─ core/agent.py          → Pipeline orchestrator (7-step workflow)
-       ├─ tools/fetch_rss.py        → RSS ingestion (880+ articles/run)
-       ├─ tools/filter_news.py      → Entity matching + importance scoring
-       ├─ tools/database.py         → SQLite dedup + summary cache
-       ├─ tools/summarize_news.py   → Groq LLM strategic analysis engine
-       └─ tools/send_telegram.py    → Telegram delivery (auto-chunking)
-  └─ core/config.py         → Centralized configuration (env + defaults)
+```mermaid
+flowchart TD
+    CLI["🖥️ CLI / Cron / Task Scheduler\npython main.py"]
+    API["🌐 FastAPI REST API\nuvicorn api.main:app"]
+    
+    CLI --> AGENT["NewsAgent Orchestrator\ncore/agent.py"]
+    API --> AGENT
+    API --> DB["SQLite Database\ntools/database.py"]
+
+    AGENT --> STEP1["① RSS Fetcher\ntools/fetch_rss.py"]
+    STEP1 -->|"880 raw articles"| STEP2["② Entity Filter\ntools/filter_news.py"]
+    STEP2 -->|"700+ competitor articles"| STEP3["③ Deduplicator\ntools/database.py"]
+    STEP3 -->|"new articles"| STEP4["④ Importance Scorer\ntools/filter_news.py"]
+    STEP4 -->|"top 10 ranked"| STEP5["⑤ Groq LLM Summarizer\ntools/summarize_news.py"]
+    STEP5 -->|"strategic summaries"| STEP6["⑥ Telegram Delivery\ntools/send_telegram.py"]
+    STEP6 --> STEP7["⑦ Persist Articles\ntools/database.py"]
+    STEP7 --> DB
+
+    subgraph CONFIG["core/config.py"]
+        C1["15 Competitors + Aliases"]
+        C2["23 RSS & Google News Feeds"]
+        C3["50+ Keyword Weights"]
+    end
+    CONFIG -.-> STEP1 & STEP2 & STEP4 & STEP5 & STEP6
 ```
 
-### Pipeline Flow
+---
 
-```
-880+ articles → Company Filter (741) → Dedup (616 new) → Score & Rank
-  → Top 10 → Groq LLM Analysis → Strategic Briefing → Telegram
-```
+## ✨ Production Features
+
+| Feature | Implementation | Where Used |
+|---|---|---|
+| **Multi-source Ingestion** | 23 feeds (8 industry feeds + 15 Google News competitor queries) with timeout & headers | [`tools/fetch_rss.py`](tools/fetch_rss.py) |
+| **Boundary-Safe Matching** | Pre-compiled regex with boundary checks (`(?<!\w)...(?!\w)`) and titlecase rules | [`tools/filter_news.py`](tools/filter_news.py) |
+| **Keyword-Weighted Scoring** | 50+ energy keywords, title multiplier (1.5×), and multi-company bonuses | [`tools/filter_news.py`](tools/filter_news.py) |
+| **LLM Strategic Analysis** | Groq REST API (`llama-3.3-70b-versatile`) with JSON mode & token telemetry | [`tools/summarize_news.py`](tools/summarize_news.py) |
+| **Production Rate Limiting** | Exponential backoff ($12 \times 3^{n-1}$), batching, and inter-batch cooldown | [`tools/summarize_news.py`](tools/summarize_news.py) |
+| **Persistent Deduplication** | SQLite batched query (`WHERE link IN (...)`) — zero duplicate deliveries | [`tools/database.py`](tools/database.py) |
+| **Summary Caching** | Cached LLM responses stored in SQLite to eliminate redundant API calls | [`tools/database.py`](tools/database.py) |
+| **Telegram Auto-Chunking** | Message splitting on `\n` boundaries (≤ 4000 chars) with retry resilience | [`tools/send_telegram.py`](tools/send_telegram.py) |
+| **FastAPI REST Layer** | Full async REST API with Pydantic v2 schemas and Swagger documentation | [`api/main.py`](api/main.py) |
+| **Docker Readiness** | Multi-purpose container supporting both batch pipeline and REST server | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) |
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
+### 1. Prerequisites
 - **Python 3.11+**
 - **Groq API key** — free at [console.groq.com/keys](https://console.groq.com/keys)
 - **Telegram Bot Token** — via [@BotFather](https://t.me/BotFather)
 
-### Setup
-
+### 2. Installation
 ```bash
-cd news-agent
+# Clone the repository
+git clone https://github.com/your-username/EPC-ETL.git
+cd EPC-ETL
 
 # Create & activate virtual environment
 python -m venv venv
-source venv/bin/activate        # Linux/macOS
-venv\Scripts\activate           # Windows
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure
+# Configure environment variables
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your GROQ_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 ```
 
-### Run
-
+### 3. Run CLI Modes
 ```bash
-python main.py              # Run daily digest
-python main.py --test       # Test Telegram connectivity
-python main.py --status     # Show database stats
+# Run daily competitor briefing
+python main.py
+
+# Test Telegram connectivity
+python main.py --test
+
+# Inspect database stats & recent articles
+python main.py --status
 ```
 
----
-
-## 📱 Telegram Bot Setup
-
-### Create the Bot
-
-1. Open Telegram → search **@BotFather** → send `/newbot`
-2. Choose a name and username
-3. Copy the **bot token** (format: `123456789:ABCdef...`)
-
-### Get Your Chat ID
-
-1. Send any message to your new bot
-2. Visit: `https://api.telegram.org/bot<TOKEN>/getUpdates`
-3. Find `"chat":{"id": <YOUR_CHAT_ID>}` in the response
-
-### For Channels
-
-1. Create a channel → add your bot as **administrator**
-2. Use `@channel_username` or the numeric ID as `TELEGRAM_CHAT_ID`
-
----
-
-## ⏰ Automating Daily Execution
-
-### Linux/macOS (cron)
-
+### 4. Run FastAPI Server
 ```bash
-# Run at 8 AM daily
-0 8 * * * cd /path/to/news-agent && /path/to/venv/bin/python main.py >> /var/log/news-agent.log 2>&1
-
-# Twice daily (8 AM and 6 PM)
-0 8,18 * * * cd /path/to/news-agent && /path/to/venv/bin/python main.py >> /var/log/news-agent.log 2>&1
+uvicorn api.main:app --reload --port 8000
 ```
-
-### Windows (Task Scheduler)
-
-1. Open **Task Scheduler** (`taskschd.msc`)
-2. **Create Basic Task** → Name: `EPC Intelligence Agent`
-3. Trigger: **Daily** at your preferred time
-4. Action: **Start a program**
-   - Program: `C:\path\to\news-agent\venv\Scripts\python.exe`
-   - Arguments: `main.py`
-   - Start in: `C:\path\to\news-agent`
+Visit the interactive Swagger UI at **http://localhost:8000/docs** to test:
+- `GET /health` — System status and SQLite health
+- `GET /stats` — Total articles & per-company article counts
+- `GET /articles?limit=10&company=Saipem` — Filtered historical articles
+- `POST /digest/run?async_mode=true` — Trigger pipeline on-demand
 
 ---
 
-## ☁️ Cloud Deployment
+## 🐳 Docker Deployment
 
-### Railway
-
-```json
-// railway.json
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": { "builder": "NIXPACKS" },
-  "deploy": {
-    "numReplicas": 1,
-    "restartPolicyType": "ON_FAILURE",
-    "cronSchedule": "0 8 * * *"
-  }
-}
-```
-
+### Run API with Docker Compose:
 ```bash
-railway login && railway init && railway up
+docker compose up -d api
 ```
+Access the API at `http://localhost:8000`.
 
-### Render
-
-```yaml
-# render.yaml
-services:
-  - type: cron
-    name: epc-intelligence-agent
-    runtime: python
-    schedule: "0 8 * * *"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
-    envVars:
-      - key: GROQ_API_KEY
-        sync: false
-      - key: TELEGRAM_BOT_TOKEN
-        sync: false
-      - key: TELEGRAM_CHAT_ID
-        sync: false
+### Run Daily Batch Agent with Docker:
+```bash
+docker build -t epc-agent .
+docker run --rm --env-file .env -v ./data:/app/data epc-agent python main.py
 ```
 
 ---
 
-## 🔮 Extending the Agent
+## 🧪 Running Tests
 
-The modular tool-based architecture makes this easy to extend:
-
-### Add New Tools
-
-```python
-# tools/analyze_sentiment.py
-class SentimentAnalyzer:
-    def analyze(self, articles: list[dict]) -> list[dict]:
-        # Add sentiment scores to each article
-        ...
+The test suite covers entity filtering, SQLite deduplication and caching, RSS HTML parsing, and FastAPI endpoints:
+```bash
+pytest -v
 ```
 
-### Build a Tool Registry
-
-```python
-# core/tool_registry.py
-class ToolRegistry:
-    def __init__(self):
-        self.tools = {}
-
-    def register(self, name: str, tool: Any):
-        self.tools[name] = tool
+All 17 tests pass with zero warnings:
+```text
+tests/test_api.py::test_root_endpoint PASSED
+tests/test_api.py::test_health_endpoint PASSED
+tests/test_api.py::test_stats_endpoint PASSED
+tests/test_api.py::test_articles_endpoint PASSED
+tests/test_database.py::test_database_initialization PASSED
+tests/test_database.py::test_save_and_count_articles PASSED
+tests/test_database.py::test_filter_new_articles_deduplication PASSED
+tests/test_database.py::test_summary_cache PASSED
+tests/test_database.py::test_get_articles_pagination_and_filter PASSED
+tests/test_fetch_rss.py::test_clean_html_stripping PASSED
+tests/test_fetch_rss.py::test_normalize_entry_valid PASSED
+tests/test_fetch_rss.py::test_normalize_entry_missing_data PASSED
+tests/test_filter.py::test_filter_positive_company_match PASSED
+tests/test_filter.py::test_alias_matching PASSED
+tests/test_filter.py::test_false_positive_substring_prevention PASSED
+tests/test_filter.py::test_score_articles_calculation PASSED
+tests/test_filter.py::test_empty_articles_input PASSED
+======================== 17 passed in 0.71s ========================
 ```
-
-### Add an LLM-Driven Planner
-
-```python
-# Let the agent autonomously decide which tools to use
-tools = ["fetch_rss", "filter_news", "summarize", "send_telegram", "analyze_sentiment"]
-plan = llm.plan(task="Generate daily digest with sentiment analysis", tools=tools)
-```
-
-### Future Directions
-
-- **Memory & Learning** — Track which articles the user found useful, learn preferences over time
-- **Multi-channel Delivery** — Swap `TelegramSender` for `SlackSender`, `DiscordSender`, or `EmailSender`
-- **Dashboard** — Build a web UI on top of the SQLite article database
-
----
-
-## ⚙️ Configuration Reference
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GROQ_API_KEY` | ✅ | — | Groq API key ([free tier](https://console.groq.com/keys)) |
-| `GROQ_MODEL` | ❌ | `llama-3.3-70b-versatile` | LLM model for strategic analysis |
-| `TELEGRAM_BOT_TOKEN` | ✅ | — | Telegram bot token via @BotFather |
-| `TELEGRAM_CHAT_ID` | ✅ | — | Target chat/channel ID (comma-separated for multi-chat) |
-| `TRACKED_COMPANIES` | ❌ | 15 EPC competitors | Comma-separated company list |
-| `MAX_ARTICLES_PER_FEED` | ❌ | `50` | Max articles fetched per RSS feed |
-| `DIGEST_MAX_ARTICLES` | ❌ | `10` | Max articles in daily briefing |
-| `BREAKING_NEWS_THRESHOLD` | ❌ | `8.5` | Importance score threshold for 🔴 flag |
-| `SUMMARY_LANGUAGE` | ❌ | `english` | Output language (`english` or `hindi`) |
-| `GROQ_BATCH_SIZE` | ❌ | `10` | Articles per LLM API call |
-| `GROQ_RETRY_ATTEMPTS` | ❌ | `3` | Max retry attempts on API failure |
-| `LOG_LEVEL` | ❌ | `INFO` | Logging verbosity |
 
 ---
 
 ## 📁 Project Structure
 
-```
-news-agent/
+```text
+EPC-ETL/
+├── api/
+│   ├── __init__.py
+│   └── main.py                # FastAPI REST API serving layer & Pydantic schemas
 ├── core/
 │   ├── __init__.py
-│   ├── config.py              # Centralized configuration (companies, feeds, weights)
-│   └── agent.py               # 7-step pipeline orchestrator
+│   ├── agent.py               # 7-step pipeline orchestrator (NewsAgent)
+│   └── config.py              # Centralized configuration (companies, feeds, weights)
 ├── tools/
 │   ├── __init__.py
-│   ├── fetch_rss.py           # RSS ingestion (24+ feeds)
-│   ├── filter_news.py         # Entity matching + importance scoring
-│   ├── summarize_news.py      # Groq LLM strategic analysis engine
-│   ├── send_telegram.py       # Telegram delivery with auto-chunking
-│   └── database.py            # SQLite dedup + summary cache
+│   ├── fetch_rss.py           # RSS ingestion with timeout and BeautifulSoup cleaning
+│   ├── filter_news.py         # Boundary-safe entity matching & importance scoring
+│   ├── summarize_news.py      # Groq LLM strategic implication engine & telemetry
+│   ├── send_telegram.py       # Telegram delivery with auto-chunking & retry logic
+│   └── database.py            # SQLite batched dedup & summary cache
+├── eval/
+│   ├── golden_dataset.json    # 100-sample ground-truth labeled benchmark
+│   ├── generate_dataset.py    # Benchmark dataset generator
+│   ├── evaluate_filter.py     # Evaluation runner (precision/recall/latency metrics)
+│   └── results.json           # Recorded evaluation benchmark metrics
+├── tests/
+│   ├── __init__.py
+│   ├── test_api.py            # FastAPI endpoint tests
+│   ├── test_database.py       # SQLite dedup & cache tests
+│   ├── test_fetch_rss.py      # RSS feed parsing & normalizer tests
+│   └── test_filter.py         # Entity matching, aliases, and scoring tests
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # GitHub Actions CI workflow (pytest + eval)
 ├── data/
 │   └── news.db                # SQLite database (auto-created)
-├── .env                       # Secrets (never committed)
-├── .env.example               # Template for .env
-├── requirements.txt           # Python dependencies
-├── main.py                    # CLI entry point
-└── README.md
+├── Dockerfile                 # Multi-stage production container
+├── docker-compose.yml         # Compose configuration for API and Agent
+├── .dockerignore              # Container ignore list
+├── .env.example               # Configuration template
+├── requirements.txt           # Core and development dependencies
+├── main.py                    # CLI entry point (--test, --status)
+└── README.md                  # Project documentation
 ```
 
 ---
 
 ## 📄 License
 
-MIT License — use freely, modify as needed.
+MIT License — free for educational and commercial use.

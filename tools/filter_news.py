@@ -1,9 +1,10 @@
 """
 News Filtering & Importance Scoring Tool.
 
-Filters articles by 15 tracked EPC competitors using regex-based fuzzy
-alias matching, then scores importance using 50+ configurable keyword
-weights tuned for the energy and construction sector.
+Filters articles by 15 tracked EPC competitors using regex-based alias matching
+with strict boundary checks to avoid substring false positives, then scores
+importance using 50+ configurable keyword weights tuned for the energy and
+construction sector.
 """
 
 import logging
@@ -17,6 +18,10 @@ from core.config import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Common English words that can be company names/aliases only when capitalized
+# (e.g., "Wood" as the engineering contractor vs "wood chips" / "driftwood")
+_TITLECASE_ONLY_TERMS = {"wood"}
 
 
 class NewsFilter:
@@ -34,14 +39,39 @@ class NewsFilter:
         self.aliases = aliases or COMPANY_ALIASES
         self.keyword_weights = keyword_weights or KEYWORD_WEIGHTS
 
-        # Pre-compile regex patterns for each company
-        self._patterns: dict[str, re.Pattern] = {}
+        # Pre-compile regex patterns for each company with boundary protection
+        # (?<![a-zA-Z0-9]) and (?![a-zA-Z0-9]) prevent false positives on substrings
+        # (e.g., alias "wood" matching "Hollywood" or alias "lin" matching "online")
+        self._patterns: dict[str, list[re.Pattern]] = {}
         for company in self.companies:
-            terms = [re.escape(company)]
-            for alias in self.aliases.get(company, []):
-                terms.append(re.escape(alias))
-            pattern = re.compile("|".join(terms), re.IGNORECASE)
-            self._patterns[company] = pattern
+            raw_terms = [company] + self.aliases.get(company, [])
+            unique_terms = set(raw_terms)
+
+            patterns: list[re.Pattern] = []
+
+            # Split into titlecase-sensitive terms and general case-insensitive terms
+            case_sensitive_terms = [
+                re.escape(t.capitalize())
+                for t in unique_terms
+                if t.lower() in _TITLECASE_ONLY_TERMS
+            ]
+            case_insensitive_terms = [
+                re.escape(t)
+                for t in unique_terms
+                if t.lower() not in _TITLECASE_ONLY_TERMS and t.strip()
+            ]
+
+            if case_insensitive_terms:
+                # Sort by descending length so multi-word aliases match preferentially
+                case_insensitive_terms.sort(key=len, reverse=True)
+                ci_pattern_str = rf"(?<![a-zA-Z0-9])(?:{'|'.join(case_insensitive_terms)})(?![a-zA-Z0-9])"
+                patterns.append(re.compile(ci_pattern_str, re.IGNORECASE))
+
+            if case_sensitive_terms:
+                cs_pattern_str = rf"(?<![a-zA-Z0-9])(?:{'|'.join(case_sensitive_terms)})(?![a-zA-Z0-9])"
+                patterns.append(re.compile(cs_pattern_str))
+
+            self._patterns[company] = patterns
 
     def filter_articles(
         self, articles: list[dict[str, Any]]
@@ -100,8 +130,9 @@ class NewsFilter:
 
             # Keyword scoring
             for keyword, weight in self.keyword_weights.items():
-                if keyword.lower() in full_text:
-                    multiplier = 1.5 if keyword.lower() in title else 1.0
+                kw_lower = keyword.lower()
+                if kw_lower in full_text:
+                    multiplier = 1.5 if kw_lower in title else 1.0
                     score += weight * multiplier
 
             # Company mention bonus
@@ -117,7 +148,7 @@ class NewsFilter:
         Find all tracked companies mentioned in the text.
         """
         matched = []
-        for company, pattern in self._patterns.items():
-            if pattern.search(text):
+        for company, patterns in self._patterns.items():
+            if any(p.search(text) for p in patterns):
                 matched.append(company)
         return matched
