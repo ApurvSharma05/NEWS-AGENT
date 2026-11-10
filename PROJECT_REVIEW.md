@@ -220,7 +220,7 @@ Every time the pipeline executes, it performs six core steps:
 
 The problem solved: Corporate strategy analysts currently spend hours every morning manually searching industry trade journals and Google News. This system completely automates the collection, filtering, deduplication, strategic analysis, and delivery, running in under 2 minutes at zero API cost.
 
-> **Codebase Context:** The initial version in early development was tested on AI companies (OpenAI, Anthropic) using Google Gemini; when rate-limits were encountered, the architecture was refactored and specialized for the EPC energy sector using Groq Llama 3.3 70B. It has now undergone a full production hardening cycle with unit tests, Docker packaging, an evaluation framework, and a FastAPI serving layer.
+> **Codebase Context:** The initial version in early development was tested on AI companies using Google Gemini; when rate-limits were encountered, the architecture was refactored and specialized for the EPC energy sector using Groq Llama 3.3 70B. It has now undergone a full production hardening cycle with unit tests, Docker packaging, an evaluation framework, and a FastAPI serving layer.
 
 ---
 
