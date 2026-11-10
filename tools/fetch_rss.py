@@ -9,6 +9,7 @@ user-agent headers, and BeautifulSoup HTML cleaning.
 
 import logging
 import re
+import socket
 from datetime import datetime, timezone
 from time import mktime
 from typing import Any
@@ -112,7 +113,7 @@ class RSSFetcher:
         if feed_content is not None:
             feed = feedparser.parse(feed_content)
         else:
-            feed = feedparser.parse(url)
+            feed = self._parse_url_with_timeout(url)
 
         if feed.bozo and not feed.entries:
             logger.warning("Feed %s returned bozo error: %s", name, getattr(feed, "bozo_exception", "Unknown XML error"))
@@ -125,6 +126,21 @@ class RSSFetcher:
                 articles.append(article)
 
         return articles
+
+    def _parse_url_with_timeout(self, url: str) -> Any:
+        """
+        Let feedparser fetch the URL itself, but bounded by ``self.timeout``.
+
+        feedparser's own downloader (urllib) has no timeout parameter and falls
+        back to the socket default, so set that default for the duration of the
+        call and restore it afterwards.
+        """
+        previous = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(self.timeout)
+        try:
+            return feedparser.parse(url)
+        finally:
+            socket.setdefaulttimeout(previous)
 
     @staticmethod
     def _clean_html(text: str) -> str:

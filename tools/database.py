@@ -1,9 +1,15 @@
 """
 SQLite Database Tool — Deduplication & Caching Layer.
 
-Provides persistent storage for article deduplication (never sends the
-same article twice) and LLM summary caching (avoids redundant API calls
-across runs). Uses the article URL as the unique key.
+Provides persistent storage for article deduplication and LLM summary caching
+(avoids redundant API calls across runs). Uses the article URL as the unique key.
+
+Two separate notions are stored:
+  - ``articles``       : articles that were DELIVERED in a digest (history shown by the API).
+  - ``seen_articles``  : every link the pipeline has processed (delivered or not),
+                         so articles ranked below the digest cut-off are not
+                         re-processed as "new" on every run.
+Dedup (``filter_new_articles``) skips links found in either table.
 """
 
 import json
@@ -46,6 +52,15 @@ CREATE TABLE IF NOT EXISTS summary_cache (
 """
 
 
+# Every link the pipeline has already processed, whether or not it made the digest.
+_CREATE_SEEN_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS seen_articles (
+    link          TEXT PRIMARY KEY,
+    first_seen_at TEXT NOT NULL
+);
+"""
+
+
 class NewsDatabase:
     """
     SQLite-backed storage for deduplication and article history.
@@ -64,6 +79,7 @@ class NewsDatabase:
                 conn.execute(_CREATE_TABLE_SQL)
                 conn.execute(_CREATE_INDEX_SQL)
                 conn.execute(_CREATE_CACHE_TABLE_SQL)
+                conn.execute(_CREATE_SEEN_TABLE_SQL)
                 conn.commit()
             logger.info("Database initialized at %s", self.db_path)
         except sqlite3.Error as exc:
@@ -80,7 +96,8 @@ class NewsDatabase:
         self, articles: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
         """
-        Return only articles whose links are NOT already in the database.
+        Return only articles whose links are NOT already known, i.e. neither
+        delivered (``articles``) nor processed earlier (``seen_articles``).
         Uses batched 'WHERE link IN (...)' queries to avoid N+1 query bottlenecks.
 
         Args:
@@ -104,8 +121,9 @@ class NewsDatabase:
                     batch = links[i : i + batch_size]
                     placeholders = ",".join("?" for _ in batch)
                     rows = conn.execute(
-                        f"SELECT link FROM articles WHERE link IN ({placeholders})",
-                        batch,
+                        f"SELECT link FROM articles WHERE link IN ({placeholders}) "
+                        f"UNION SELECT link FROM seen_articles WHERE link IN ({placeholders})",
+                        batch + batch,
                     ).fetchall()
                     existing_links.update(row["link"] for row in rows)
 
@@ -171,6 +189,39 @@ class NewsDatabase:
 
         logger.info("Saved %d new articles to database.", inserted)
         return inserted
+
+    def mark_seen(self, articles: list[dict[str, Any]]) -> int:
+        """
+        Record the links of all processed articles as seen, so they are not
+        treated as new on later runs. Independent of delivery: call it with the
+        full set of articles that went through the pipeline.
+
+        Args:
+            articles: List of article dicts (must have 'link' key).
+
+        Returns:
+            Number of newly recorded links.
+        """
+        links = [a.get("link", "") for a in articles if a.get("link")]
+        if not links:
+            return 0
+
+        now = datetime.now(timezone.utc).isoformat()
+        try:
+            with self._connect() as conn:
+                before = conn.total_changes
+                conn.executemany(
+                    "INSERT OR IGNORE INTO seen_articles (link, first_seen_at) VALUES (?, ?)",
+                    [(link, now) for link in links],
+                )
+                conn.commit()
+                recorded = conn.total_changes - before
+        except sqlite3.Error as exc:
+            logger.error("Failed to mark articles as seen: %s", exc)
+            return 0
+
+        logger.info("Marked %d new links as seen.", recorded)
+        return recorded
 
     def get_recent_articles(
         self, limit: int = 50

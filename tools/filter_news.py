@@ -39,6 +39,23 @@ class NewsFilter:
         self.aliases = aliases or COMPANY_ALIASES
         self.keyword_weights = keyword_weights or KEYWORD_WEIGHTS
 
+        # Pre-compile one boundary-aware pattern per scoring keyword. The keyword
+        # must not be preceded by a letter/digit, and may only be followed by a
+        # plain inflection (s/es/d/ed/ing) before a non-alphanumeric character.
+        # So "bid" matches "bid"/"bids" but not "forbidden"; "fid" does not match
+        # "confident"; "feed" does not match "feedstock"; "acquire" still matches
+        # "acquired".
+        self._keyword_patterns: list[tuple[re.Pattern, float]] = [
+            (
+                re.compile(
+                    rf"(?<![a-z0-9]){re.escape(kw.lower())}(?:s|es|d|ed|ing)?(?![a-z0-9])",
+                    re.IGNORECASE,
+                ),
+                weight,
+            )
+            for kw, weight in self.keyword_weights.items()
+        ]
+
         # Pre-compile regex patterns for each company with boundary protection
         # (?<![a-zA-Z0-9]) and (?![a-zA-Z0-9]) prevent false positives on substrings
         # (e.g., alias "wood" matching "Hollywood" or alias "lin" matching "online")
@@ -122,17 +139,16 @@ class NewsFilter:
             Same articles with an 'importance_score' field added.
         """
         for article in articles:
-            title = article.get("title", "").lower()
-            summary = article.get("summary", "").lower()
+            title = article.get("title", "")
+            summary = article.get("summary", "")
             full_text = f"{title} {summary}"
 
             score = 0.0
 
-            # Keyword scoring
-            for keyword, weight in self.keyword_weights.items():
-                kw_lower = keyword.lower()
-                if kw_lower in full_text:
-                    multiplier = 1.5 if kw_lower in title else 1.0
+            # Keyword scoring (word-boundary matching, see __init__)
+            for pattern, weight in self._keyword_patterns:
+                if pattern.search(full_text):
+                    multiplier = 1.5 if pattern.search(title) else 1.0
                     score += weight * multiplier
 
             # Company mention bonus

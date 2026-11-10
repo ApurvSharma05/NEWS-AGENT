@@ -189,6 +189,23 @@ BREAKING_NEWS_THRESHOLD: float = float(os.getenv("BREAKING_NEWS_THRESHOLD", "8.5
 SUMMARY_LANGUAGE: str = os.getenv("SUMMARY_LANGUAGE", "english")  # "english" or "hindi"
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
+# ─── API Security ────────────────────────────────────────────────────────────
+# Optional shared secret for POST /digest/run (sent as the X-API-Key header).
+# Empty (default) = no auth, which keeps local development and tests simple.
+# Set it whenever the API is reachable by anyone other than you.
+DIGEST_API_KEY: str = os.getenv("DIGEST_API_KEY", "")
+
+# Browser origins allowed to call the API (comma-separated). Defaults to local
+# dev dashboards only; use "*" explicitly if you really want to allow any origin.
+CORS_ALLOW_ORIGINS: list[str] = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ALLOW_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if o.strip()
+]
+
 # ─── Groq Rate Limiting ─────────────────────────────────────────────────────
 # Tuned for the free tier (configured for 5 RPM to prevent rate limiting)
 GROQ_BATCH_SIZE: int = int(os.getenv("GROQ_BATCH_SIZE", "10"))

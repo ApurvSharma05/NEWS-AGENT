@@ -3,7 +3,7 @@
 EPC Competitor Intelligence Agent — Entry Point
 
 An autonomous AI-powered competitive intelligence system that monitors
-880+ news sources daily, extracts strategic implications using LLM analysis,
+23 news feeds daily (~880 articles per run), extracts strategic implications using LLM analysis,
 and delivers actionable briefings via Telegram.
 
 Usage:

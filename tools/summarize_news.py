@@ -269,11 +269,12 @@ class NewsSummarizer:
         """
         Make an API call with exponential backoff retry.
 
-        Retry strategy:
+        Retry strategy (GROQ_RETRY_ATTEMPTS = total attempts, default 3;
+        sleeps happen only BETWEEN attempts, base_delay * 3^(n-1)):
           - Attempt 1: immediate
-          - Attempt 2: wait base_delay * 1   (12s)
-          - Attempt 3: wait base_delay * 3   (36s)
-          - Attempt 4: wait base_delay * 9   (108s)
+          - Sleep 12s, then attempt 2
+          - Sleep 36s, then attempt 3 (last with the default of 3 attempts)
+          - Sleep 108s, then attempt 4 (only if GROQ_RETRY_ATTEMPTS >= 4)
 
         Only retries on 429, 500, 502, 503 status codes.
         """

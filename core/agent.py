@@ -8,7 +8,9 @@ Coordinates the full daily digest workflow:
   4. Score importance using 50+ weighted industry keywords
   5. Summarize top 10 articles with Groq LLM for strategic implications
   6. Format and deliver a tight, scannable briefing via Telegram
-  7. Persist processed articles to SQLite
+  7. Persist to SQLite only after a successful send: delivered articles go to
+     ``articles``, all processed links go to ``seen_articles``. If delivery
+     fails nothing is persisted, so the next run retries the same articles.
 """
 
 import logging
@@ -140,13 +142,39 @@ class NewsAgent:
 
         # Telegram has a 4096-char limit per message; split if needed
         chunks = self._split_message(digest, max_length=4000)
+        chunks_sent = 0
         for i, chunk in enumerate(chunks, 1):
-            self.sender.send_message(chunk)
+            results = self.sender.send_message(chunk)
+            if not self._delivered(results):
+                logger.error(
+                    "Telegram delivery failed on chunk %d/%d. Articles NOT saved; "
+                    "they will be retried on the next run.",
+                    i,
+                    len(chunks),
+                )
+                return {
+                    "status": "delivery_failed",
+                    "articles_fetched": len(raw_articles),
+                    "articles_filtered": len(filtered),
+                    "new_articles": len(new_articles),
+                    "digest_articles_count": len(top_articles),
+                    "breaking_count": len(breaking),
+                    "summaries_count": len(summaries),
+                    "chunks_sent": chunks_sent,
+                    "articles_saved": 0,
+                    "telemetry": self.summarizer.get_metrics(),
+                }
+            chunks_sent += 1
             logger.info("Sent digest chunk %d/%d.", i, len(chunks))
 
-        # Step 7 — Persist articles so they won't appear again
+        # Step 7 — Persist only after successful delivery.
+        # Delivered articles go to history; every processed link is marked seen
+        # so the ~700 lower-ranked articles are not "new" again tomorrow.
         saved_count = self.db.save_articles(top_articles)
-        logger.info("Saved %d articles to database.", saved_count)
+        seen_count = self.db.mark_seen(new_articles)
+        logger.info(
+            "Saved %d delivered articles; marked %d links as seen.", saved_count, seen_count
+        )
 
         logger.info("Daily digest complete. ✅")
 
@@ -158,12 +186,18 @@ class NewsAgent:
             "digest_articles_count": len(top_articles),
             "breaking_count": len(breaking),
             "summaries_count": len(summaries),
-            "chunks_sent": len(chunks),
+            "chunks_sent": chunks_sent,
             "articles_saved": saved_count,
+            "articles_marked_seen": seen_count,
             "telemetry": self.summarizer.get_metrics(),
         }
 
     # ── Private helpers ───────────────────────────────────────────────────
+
+    @staticmethod
+    def _delivered(results: list[dict[str, Any]]) -> bool:
+        """True if at least one chat accepted the message (Telegram ok=true)."""
+        return any(r.get("ok") for r in results or [])
 
     def _format_digest(self, summaries: list[dict]) -> str:
         """

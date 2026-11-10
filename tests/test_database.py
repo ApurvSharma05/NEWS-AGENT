@@ -108,3 +108,20 @@ def test_get_articles_pagination_and_filter(temp_db):
     saipem_only = temp_db.get_articles(company="Saipem")
     assert len(saipem_only) == 5
     assert all("Saipem" in a["companies"] for a in saipem_only)
+
+
+def test_mark_seen_makes_undelivered_articles_dedup(temp_db):
+    delivered = {"title": "Delivered", "link": "https://example.com/d", "companies": ["Saipem"]}
+    skipped = {"title": "Ranked below cut-off", "link": "https://example.com/s", "companies": ["Fluor"]}
+    fresh = {"title": "Fresh", "link": "https://example.com/f", "companies": ["Worley"]}
+
+    temp_db.save_articles([delivered])
+    assert temp_db.mark_seen([delivered, skipped]) == 2
+
+    # Seen-but-undelivered links are not re-surfaced, and are not in delivered history.
+    new = temp_db.filter_new_articles([delivered, skipped, fresh])
+    assert [a["link"] for a in new] == ["https://example.com/f"]
+    assert temp_db.count_articles() == 1
+
+    # Marking again is idempotent.
+    assert temp_db.mark_seen([skipped]) == 0

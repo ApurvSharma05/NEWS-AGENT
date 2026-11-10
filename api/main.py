@@ -7,13 +7,15 @@ database telemetry, system health, and triggering on-demand digest runs.
 
 from datetime import datetime, timezone
 import logging
+import secrets
+import threading
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from core.config import TRACKED_COMPANIES, DB_PATH
+from core.config import TRACKED_COMPANIES, DB_PATH, DIGEST_API_KEY, CORS_ALLOW_ORIGINS
 from tools.database import NewsDatabase
 from core.agent import NewsAgent
 
@@ -28,17 +30,44 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# Enable CORS for local dashboards and frontend clients
+# CORS: only the origins listed in CORS_ALLOW_ORIGINS (default: local dev dashboards).
+# No cookies are used, so credentials are not allowed cross-origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ALLOW_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 # Shared database instance
 db = NewsDatabase()
+
+# Only one digest run at a time (per process). A run sends Telegram messages and
+# spends Groq quota, so concurrent triggers are rejected with 409.
+_digest_lock = threading.Lock()
+
+
+def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    """
+    Guard for state-changing endpoints. If DIGEST_API_KEY is empty (default) the
+    check is disabled; otherwise the X-API-Key header must match it.
+    """
+    if not DIGEST_API_KEY:
+        return
+    if not x_api_key or not secrets.compare_digest(x_api_key, DIGEST_API_KEY):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key.")
+
+
+def _run_digest_locked(agent: NewsAgent) -> dict[str, Any] | None:
+    """Run the pipeline and always release the lock acquired by the caller."""
+    try:
+        return agent.run_daily_digest()
+    except Exception:
+        logger.exception("Background digest run failed.")
+        return None
+    finally:
+        _digest_lock.release()
 
 
 # ── Pydantic Request/Response Models ──────────────────────────────────────────
@@ -180,27 +209,41 @@ def get_stats() -> StatsResponse:
 
 
 @app.post("/digest/run", response_model=DigestTriggerResponse, tags=["Pipeline"])
-def trigger_digest(background_tasks: BackgroundTasks, async_mode: bool = Query(default=True)) -> DigestTriggerResponse:
+def trigger_digest(
+    background_tasks: BackgroundTasks,
+    async_mode: bool = Query(default=True),
+    _auth: None = Depends(require_api_key),
+) -> DigestTriggerResponse:
     """
     Trigger the daily competitor monitoring pipeline on demand.
     Runs asynchronously in the background by default.
+
+    Requires the `X-API-Key` header when `DIGEST_API_KEY` is configured.
+    Returns 409 if a run is already in progress.
     """
+    if not _digest_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="A digest run is already in progress.")
+
+    handed_off = False
     try:
         agent = NewsAgent()
         if async_mode:
-            background_tasks.add_task(agent.run_daily_digest)
+            background_tasks.add_task(_run_digest_locked, agent)
+            handed_off = True  # the background task now owns (and releases) the lock
             return DigestTriggerResponse(
                 status="queued",
                 message="Pipeline execution queued in background task.",
                 details={"async_mode": True},
             )
-        else:
-            result = agent.run_daily_digest()
-            return DigestTriggerResponse(
-                status="completed",
-                message="Pipeline execution finished.",
-                details=result,
-            )
+        result = agent.run_daily_digest()
+        return DigestTriggerResponse(
+            status="completed",
+            message="Pipeline execution finished.",
+            details=result,
+        )
     except Exception as exc:
         logger.error("Digest trigger failed: %s", exc)
         raise HTTPException(status_code=500, detail=f"Failed to run pipeline: {exc}")
+    finally:
+        if not handed_off:
+            _digest_lock.release()

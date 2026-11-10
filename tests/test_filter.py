@@ -73,3 +73,29 @@ def test_score_articles_calculation(news_filter):
 def test_empty_articles_input(news_filter):
     assert news_filter.filter_articles([]) == []
     assert news_filter.score_articles([]) == []
+
+
+def test_keyword_scoring_uses_word_boundaries(news_filter):
+    """Short keywords (bid, fid, ipo, jv, ceo, feed) must not fire inside longer words."""
+    articles = [
+        {
+            "title": "Saipem forbidden from confident equipment feedstock deal",
+            "summary": "Twins and Hipo Orceo jvc.",
+            "companies": ["Saipem"],
+        }
+    ]
+    score = news_filter.score_articles(articles)[0]["importance_score"]
+    assert score == pytest.approx(1.0)  # company bonus only
+
+
+def test_keyword_scoring_still_matches_inflections(news_filter):
+    articles = [
+        {
+            "title": "Fluor bids on contracts",
+            "summary": "Rival acquired a stake; delays expected.",
+            "companies": ["Fluor"],
+        }
+    ]
+    score = news_filter.score_articles(articles)[0]["importance_score"]
+    # bid 2.5*1.5 + contract 3.0*1.5 + acquire 3.5 + delay 3.0 + company 1.0
+    assert score == pytest.approx(3.75 + 4.5 + 3.5 + 3.0 + 1.0)
